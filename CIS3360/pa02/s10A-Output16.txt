@@ -1,0 +1,3 @@
+AAAAAAAAAA
+
+16 bit checksum is        0 for all    0 chars
