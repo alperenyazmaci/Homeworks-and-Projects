@@ -42,9 +42,8 @@ int base(int BP, int L) {
 
 //Function that prints the current state of the machine
 void print_state(const char *instr_name, int L, int M) {
-    printf("%s %d %d %d %d %d ", instr_name, L, M, PC, BP, SP);
+    printf("%20s %6d %6d %6d %6d %6d  ", instr_name, L, M, PC, BP, SP);
 
-    // Print stack up to SP
     int current_bp = BP;
     for (int i = 499; i >= SP; i--) {
         if (i == current_bp && current_bp != 499) {
@@ -55,6 +54,9 @@ void print_state(const char *instr_name, int L, int M) {
     }
     printf("\n");
 }
+
+
+
 
 int main(int argc, char *argv[]) {
     if (argc != 2) { //exiting if there is no input file
@@ -75,8 +77,8 @@ int main(int argc, char *argv[]) {
     fclose(file);
 
     //print the header output lines
-    printf("PC BP SP Stack\n");
-    printf("Initial values: %d %d %d\n\n", PC, BP, SP);
+    printf("%20s %6s %6s %6s %s\n", "", "PC", "BP", "SP", "Stack");
+    printf("Initial values: %6d %6d %6d\n", PC, BP, SP);
 
     //loop to fetch and execute instructions in the stack
     while (HALT) {
