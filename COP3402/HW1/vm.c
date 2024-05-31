@@ -9,6 +9,7 @@
 //Header Files
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 //Define the max ARRAY_SIZE to 500
 #define ARRAY_SIZE 500
@@ -42,7 +43,7 @@ int base(int BP, int L) {
 }
 
 //Function that prints the current state of the machine
-void print(const char *instr_name, int L, int M) {
+void print(const char instr_name[], int L, int M) {
     printf("%5s %2d %2d %9d %6d %5d  ", instr_name, L, M, PC, BP, SP);
 
     int current_bp = BP;
@@ -89,18 +90,18 @@ int main(int argc, char *argv[]) {
         PC += 3;
 
         //determining instruction name then assigning it to instr_name
-        const char *instr_name;
+        char instr_name[4];
         switch (IR.OP) {
-            case 1: instr_name = "LIT"; break;
-            case 2: instr_name = "OPR"; break;
-            case 3: instr_name = "LOD"; break;
-            case 4: instr_name = "STO"; break;
-            case 5: instr_name = "CAL"; break;
-            case 6: instr_name = "INC"; break;
-            case 7: instr_name = "JMP"; break;
-            case 8: instr_name = "JPC"; break;
-            case 9: instr_name = "SYS"; break;
-            default: instr_name = "???"; break;
+            case 1: strcpy(instr_name, "LIT"); break;
+            case 2: strcpy(instr_name, "OPR"); break;
+            case 3: strcpy(instr_name, "LOD"); break;
+            case 4: strcpy(instr_name, "STO"); break;
+            case 5: strcpy(instr_name, "CAL"); break;
+            case 6: strcpy(instr_name, "INC"); break;
+            case 7: strcpy(instr_name, "JMP"); break;
+            case 8: strcpy(instr_name, "JPC"); break;
+            case 9: strcpy(instr_name, "SYS"); break;
+            default: strcpy(instr_name, "???"); break;
         }
 
         //execute cycle
