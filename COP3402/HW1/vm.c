@@ -4,6 +4,7 @@
 //
 //  Created by Alperen Yazmaci on 05.25.2024
 //
+// AUTHOR: Alperen Yazmaci
 
 //Header Files
 #include <stdio.h>
@@ -41,7 +42,7 @@ int base(int BP, int L) {
 }
 
 //Function that prints the current state of the machine
-void print_state(const char *instr_name, int L, int M) {
+void print(const char *instr_name, int L, int M) {
     printf("%5s %2d %2d %9d %6d %5d  ", instr_name, L, M, PC, BP, SP);
 
     int current_bp = BP;
@@ -57,8 +58,6 @@ void print_state(const char *instr_name, int L, int M) {
 }
 
 
-
-
 int main(int argc, char *argv[]) {
     if (argc != 2) { //exiting if there is no input file
         return 1;
@@ -71,9 +70,9 @@ int main(int argc, char *argv[]) {
     }
 
     //load instructions into the STACK starting at index 10 then close the file after all instructions are loaded
-    int idx = 10;
-    while (fscanf(file, "%d %d %d", &STACK[idx], &STACK[idx + 1], &STACK[idx + 2]) != EOF) {
-        idx += 3;
+    int index = 10;
+    while (fscanf(file, "%d %d %d", &STACK[index], &STACK[index + 1], &STACK[index + 2]) != EOF) {
+        index += 3;
     }
     fclose(file);
 
@@ -205,7 +204,7 @@ int main(int argc, char *argv[]) {
         }
 
         //print the output after fetch-execute cycle is done
-        print_state(instr_name, IR.L, IR.M);
+        print(instr_name, IR.L, IR.M);
     }
 
     //exit the program
