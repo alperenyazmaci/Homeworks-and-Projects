@@ -45,6 +45,7 @@ void print_state(const char *instr_name, int L, int M) {
     printf("%5s %2d %2d %9d %6d %5d  ", instr_name, L, M, PC, BP, SP);
 
     int current_bp = BP;
+    printf("%3s", "");
     for (int i = 499; i >= SP; i--) {
         if (i == current_bp && current_bp != 499) {
             printf("| ");
