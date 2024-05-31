@@ -1,0 +1,17 @@
+To compile and run the P-Machine:
+
+1. Ensure you have a C compiler (gcc) installed.
+2. Save the source code to a file named `vm.c`.
+3. Open a terminal and navigate to the directory containing `vm.c`.
+4. Compile the code using gcc:
+   $ gcc -Wall -o vm vm.c
+5. Run the program with an input file:
+   $ ./vm input.txt
+
+Authors:
+- [Your Name]
+- [Teammate's Name]
+
+Contribution:
+- [Your Name]: [Description of your contribution]
+- [Teammate's Name]: [Description of your contribution]

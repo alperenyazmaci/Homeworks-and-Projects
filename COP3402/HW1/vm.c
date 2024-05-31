@@ -1,58 +1,92 @@
+//
+//  vm.c
+//  Homework1
+//
+//  Created by Alperen Yazmaci on 05.25.2024
+//
+
+//Header Files
 #include <stdio.h>
 #include <stdlib.h>
 
+//Define the max ARRAY_SIZE to 500
 #define ARRAY_SIZE 500
 
-// Define the structure for an instruction
-typedef struct {
+//Struct Aliases
+typedef struct Instruction Instruction;
+
+//Struct definition to store Instruction
+struct Instruction{
     int OP;
     int L;
     int M;
-} Instruction;
+};
 
-// Define the P-Machine registers
+//Define the P-Machine registers
 int BP = 499;
 int SP = 500;
 int PC = 10;
 Instruction IR;
-int PAS[ARRAY_SIZE] = {0};
+int STACK[ARRAY_SIZE] = {0};
 int HALT = 1;
 
-// Function declarations
-int base(int BP, int L);
-void print_state(const char *instr_name, int L, int M);
+//Function to Find base L levels down
+int base(int BP, int L) {
+    int arb = BP;
+    while (L > 0) {
+        arb = STACK[arb];
+        L--;
+    }
+    return arb;
+}
+
+//Function that prints the current state of the machine
+void print_state(const char *instr_name, int L, int M) {
+    printf("%s %d %d %d %d %d ", instr_name, L, M, PC, BP, SP);
+
+    // Print stack up to SP
+    int current_bp = BP;
+    for (int i = 499; i >= SP; i--) {
+        if (i == current_bp && current_bp != 499) {
+            printf("| ");
+            current_bp = STACK[current_bp + 1];
+        }
+        printf("%d ", STACK[i]);
+    }
+    printf("\n");
+}
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s input.txt\n", argv[0]);
-        return EXIT_FAILURE;
+    if (argc != 2) { //exiting if there is no input file
+        return 1;
     }
 
+    //getting input file and exiting the program if the file wasn't opened
     FILE *file = fopen(argv[1], "r");
     if (!file) {
-        perror("Error opening file");
-        return EXIT_FAILURE;
+        return 1;
     }
 
-    // Load instructions into PAS starting at location 10
+    //load instructions into the STACK starting at index 10 then close the file after all instructions are loaded
     int idx = 10;
-    while (fscanf(file, "%d %d %d", &PAS[idx], &PAS[idx + 1], &PAS[idx + 2]) != EOF) {
+    while (fscanf(file, "%d %d %d", &STACK[idx], &STACK[idx + 1], &STACK[idx + 2]) != EOF) {
         idx += 3;
     }
     fclose(file);
 
+    //print the header output lines
     printf("PC BP SP Stack\n");
-    printf("Initial values: %d %d %d\n", PC, BP, SP);
+    printf("Initial values: %d %d %d\n\n", PC, BP, SP);
 
-    // Main loop to fetch and execute instructions
+    //loop to fetch and execute instructions in the stack
     while (HALT) {
-        // Fetch cycle
-        IR.OP = PAS[PC];
-        IR.L = PAS[PC + 1];
-        IR.M = PAS[PC + 2];
+        //fetch cycle
+        IR.OP = STACK[PC];
+        IR.L = STACK[PC + 1];
+        IR.M = STACK[PC + 2];
         PC += 3;
 
-        // Determine instruction name for printing
+        //determining instruction name then assigning it to instr_name
         const char *instr_name;
         switch (IR.OP) {
             case 1: instr_name = "LIT"; break;
@@ -67,98 +101,98 @@ int main(int argc, char *argv[]) {
             default: instr_name = "???"; break;
         }
 
-        // Execute cycle
+        //execute cycle
         switch (IR.OP) {
-            case 1: // LIT 0 M
+            case 1: //LIT 0 M
                 SP--;
-                PAS[SP] = IR.M;
+                STACK[SP] = IR.M;
                 break;
-            case 2: // OPR 0 M
+            case 2: //OPR 0 M
                 switch (IR.M) {
-                    case 0: // RTN
+                    case 0: //RTN
                         SP = BP + 1;
-                        BP = PAS[SP - 2];
-                        PC = PAS[SP - 3];
+                        BP = STACK[SP - 2];
+                        PC = STACK[SP - 3];
                         break;
-                    case 1: // ADD
-                        PAS[SP + 1] = PAS[SP + 1] + PAS[SP];
+                    case 1: //ADD
+                        STACK[SP + 1] = STACK[SP + 1] + STACK[SP];
                         SP++;
                         break;
-                    case 2: // SUB
-                        PAS[SP + 1] = PAS[SP + 1] - PAS[SP];
+                    case 2: //SUB
+                        STACK[SP + 1] = STACK[SP + 1] - STACK[SP];
                         SP++;
                         break;
-                    case 3: // MUL
-                        PAS[SP + 1] = PAS[SP + 1] * PAS[SP];
+                    case 3: //MUL
+                        STACK[SP + 1] = STACK[SP + 1] * STACK[SP];
                         SP++;
                         break;
-                    case 4: // DIV
-                        PAS[SP + 1] = PAS[SP + 1] / PAS[SP];
+                    case 4: //DIV
+                        STACK[SP + 1] = STACK[SP + 1] / STACK[SP];
                         SP++;
                         break;
-                    case 5: // EQL
-                        PAS[SP + 1] = PAS[SP + 1] == PAS[SP];
+                    case 5: //EQL
+                        STACK[SP + 1] = STACK[SP + 1] == STACK[SP];
                         SP++;
                         break;
-                    case 6: // NEQ
-                        PAS[SP + 1] = PAS[SP + 1] != PAS[SP];
+                    case 6: //NEQ
+                        STACK[SP + 1] = STACK[SP + 1] != STACK[SP];
                         SP++;
                         break;
-                    case 7: // LSS
-                        PAS[SP + 1] = PAS[SP + 1] < PAS[SP];
+                    case 7: //LSS
+                        STACK[SP + 1] = STACK[SP + 1] < STACK[SP];
                         SP++;
                         break;
-                    case 8: // LEQ
-                        PAS[SP + 1] = PAS[SP + 1] <= PAS[SP];
+                    case 8: //LEQ
+                        STACK[SP + 1] = STACK[SP + 1] <= STACK[SP];
                         SP++;
                         break;
-                    case 9: // GTR
-                        PAS[SP + 1] = PAS[SP + 1] > PAS[SP];
+                    case 9: //GTR
+                        STACK[SP + 1] = STACK[SP + 1] > STACK[SP];
                         SP++;
                         break;
-                    case 10: // GEQ
-                        PAS[SP + 1] = PAS[SP + 1] >= PAS[SP];
+                    case 10: //GEQ
+                        STACK[SP + 1] = STACK[SP + 1] >= STACK[SP];
                         SP++;
                         break;
                 }
                 break;
-            case 3: // LOD L M
+            case 3: //LOD L M
                 SP--;
-                PAS[SP] = PAS[base(BP, IR.L) - IR.M];
+                STACK[SP] = STACK[base(BP, IR.L) - IR.M];
                 break;
-            case 4: // STO L M
-                PAS[base(BP, IR.L) - IR.M] = PAS[SP];
+            case 4: //STO L M
+                STACK[base(BP, IR.L) - IR.M] = STACK[SP];
                 SP++;
                 break;
-            case 5: // CAL L M
-                PAS[SP - 1] = base(BP, IR.L); // Static link
-                PAS[SP - 2] = BP; // Dynamic link
-                PAS[SP - 3] = PC; // Return address
+            case 5: //CAL L M
+                STACK[SP - 1] = base(BP, IR.L);
+                STACK[SP - 2] = BP;
+                STACK[SP - 3] = PC;
                 BP = SP - 1;
                 PC = IR.M;
                 break;
-            case 6: // INC 0 M
+            case 6: //INC 0 M
                 SP -= IR.M;
                 break;
-            case 7: // JMP 0 M
+            case 7: //JMP 0 M
                 PC = IR.M;
                 break;
-            case 8: // JPC 0 M
-                if (PAS[SP] == 0) {
+            case 8: //JPC 0 M
+                if (STACK[SP] == 0) {
                     PC = IR.M;
                 }
                 SP++;
                 break;
-            case 9: // SYS 0 M
+            case 9: //SYS 0 M
                 switch (IR.M) {
                     case 1:
-                        printf("Output result is: %d\n", PAS[SP]);
+                        printf("Output result is: %d\n", STACK[SP]);
                         SP++;
                         break;
                     case 2:
                         SP--;
                         printf("Please enter an integer: ");
-                        scanf("%d", &PAS[SP]);
+                        scanf("%d", &STACK[SP]);
                         break;
                     case 3:
                         HALT = 0;
@@ -167,35 +201,10 @@ int main(int argc, char *argv[]) {
                 break;
         }
 
-        // Print the state after execution
+        //print the output after fetch-execute cycle is done
         print_state(instr_name, IR.L, IR.M);
     }
 
+    //exit the program
     return 0;
-}
-
-// Function to find base L levels down
-int base(int BP, int L) {
-    int arb = BP;
-    while (L > 0) {
-        arb = PAS[arb];
-        L--;
-    }
-    return arb;
-}
-
-// Print the current state of the machine
-void print_state(const char *instr_name, int L, int M) {
-    printf("%s %d %d %d %d %d ", instr_name, L, M, PC, BP, SP);
-
-    // Print stack up to SP
-    int current_bp = BP;
-    for (int i = 499; i >= SP; i--) {
-        if (i == current_bp && current_bp != 499) {
-            printf("| ");
-            current_bp = PAS[current_bp + 1];
-        }
-        printf("%d ", PAS[i]);
-    }
-    printf("\n");
 }
