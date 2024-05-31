@@ -42,7 +42,7 @@ int base(int BP, int L) {
 
 //Function that prints the current state of the machine
 void print_state(const char *instr_name, int L, int M) {
-    printf("%20s %6d %6d %6d %6d %6d  ", instr_name, L, M, PC, BP, SP);
+    printf("%5s %2d %2d %9d %6d %5d  ", instr_name, L, M, PC, BP, SP);
 
     int current_bp = BP;
     for (int i = 499; i >= SP; i--) {
@@ -77,8 +77,8 @@ int main(int argc, char *argv[]) {
     fclose(file);
 
     //print the header output lines
-    printf("%20s %6s %6s %6s %s\n", "", "PC", "BP", "SP", "Stack");
-    printf("Initial values: %6d %6d %6d\n", PC, BP, SP);
+    printf("%15s %5s %5s %5s %10s\n", "", "PC", "BP", "SP", "Stack");
+    printf("Initial values: %5d %6d %5d\n", PC, BP, SP);
 
     //loop to fetch and execute instructions in the stack
     while (HALT) {
