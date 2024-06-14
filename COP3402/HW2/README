@@ -1,0 +1,9 @@
+To compile and run the Lexical Analyzer:
+1. Save the source code to a file named `lex.c` and open a terminal with the directory that has that file.
+2. Compile the code using gcc with the following command line code:
+   $ gcc -o lex lex.c
+3. Run the program with an input file which has the instructions:
+   $ ./lex input.txt
+
+Author: Alperen Yazmaci
+Contribution: Alperen Yazmaci (the whole code)
