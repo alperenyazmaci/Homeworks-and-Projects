@@ -6,37 +6,39 @@
 //
 // AUTHOR: Alperen Yazmaci
 
-//Header Files
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
-//Define MAX values
 #define MAX_LEXEMES 1000
 #define MAX_TOKENS 1000
 #define MAX_SOURCE_SIZE 10000
+#define MAX_IDENTIFIER_LENGTH 11
+#define MAX_NUMBER_LENGTH 5
 
-//Enum Alias and Definition
+// Enum Alias and Definition
 typedef enum {
-skipsym = 1, identsym, numbersym, plussym, minussym,
-multsym, slashsym, fisym, eqsym, neqsym, lessym, leqsym,
-gtrsym, geqsym, lparentsym, rparentsym, commasym, semicolonsym,
-periodsym, becomessym, beginsym, endsym, ifsym, thensym,
-whilesym, dosym, callsym, constsym, varsym, procsym, writesym,
-readsym , elsesym} token_type;
+    skipsym = 1, identsym, numbersym, plussym, minussym,
+    multsym, slashsym, fisym, eqsym, neqsym, lessym, leqsym,
+    gtrsym, geqsym, lparentsym, rparentsym, commasym, semicolonsym,
+    periodsym, becomessym, beginsym, endsym, ifsym, thensym,
+    whilesym, dosym, callsym, constsym, varsym, procsym, writesym,
+    readsym, elsesym, error // Error token type
+} token_type;
 
-//Struct Aliases and Definitions
+// Struct Aliases and Definitions
 typedef struct {
     char lexeme[12];
     token_type token;
+    char errorMessage[50];
 } Lexeme;
 typedef struct {
     token_type token;
     char value[12];
 } Token;
 
-//Initialize reserved and special words and tokens as constants
+// Initialize reserved and special words and tokens as constants
 const char *reservedWords[] = {
     "const", "var", "procedure", "call", "begin", "end", "if", "fi", "then", 
     "else", "while", "do", "read", "write"
@@ -51,22 +53,29 @@ const token_type specialTokens[] = {
     plussym, minussym, multsym, slashsym, lparentsym, rparentsym, eqsym, commasym, periodsym, lessym, gtrsym, semicolonsym, becomessym
 };
 
-//Initialize the global variables
+// Initialize the global variables
 Lexeme lexemes[MAX_LEXEMES];
 Token tokens[MAX_TOKENS];
 int lexemeCount = 0;
 int tokenCount = 0;
 
-
-void addLexeme(const char *lexeme, token_type token) {
-    strcpy(lexemes[lexemeCount].lexeme, lexeme);
+void addLexeme(const char *lexeme, token_type token, const char *errorMessage) {
+    strncpy(lexemes[lexemeCount].lexeme, lexeme, sizeof(lexemes[lexemeCount].lexeme) - 1);
+    lexemes[lexemeCount].lexeme[sizeof(lexemes[lexemeCount].lexeme) - 1] = '\0';
     lexemes[lexemeCount].token = token;
+    if (errorMessage != NULL) {
+        strncpy(lexemes[lexemeCount].errorMessage, errorMessage, sizeof(lexemes[lexemeCount].errorMessage) - 1);
+        lexemes[lexemeCount].errorMessage[sizeof(lexemes[lexemeCount].errorMessage) - 1] = '\0';
+    } else {
+        lexemes[lexemeCount].errorMessage[0] = '\0';
+    }
     lexemeCount++;
 }
 
 void addToken(token_type token, const char *value) {
     tokens[tokenCount].token = token;
-    strcpy(tokens[tokenCount].value, value);
+    strncpy(tokens[tokenCount].value, value, sizeof(tokens[tokenCount].value) - 1);
+    tokens[tokenCount].value[sizeof(tokens[tokenCount].value) - 1] = '\0';
     tokenCount++;
 }
 
@@ -109,8 +118,8 @@ void lexicalAnalyzer(const char *source) {
                 i++;
             }
             if (!comment_closed) {
-                printf("Error: Improperly enclosed comment\n");
-                exit(1);
+                addLexeme("/*", error, "Error: unclosed comment");
+                continue;
             }
             continue;
         }
@@ -119,15 +128,17 @@ void lexicalAnalyzer(const char *source) {
         if (isalpha(source[i])) {
             char buffer[12] = {0};
             int j = 0;
-            while (isalnum(source[i]) && j < 11) {
+            while (isalnum(source[i]) && j < MAX_IDENTIFIER_LENGTH) {
                 buffer[j++] = source[i++];
             }
+            buffer[j] = '\0'; // Ensure null-terminated
             if (isalnum(source[i])) {
-                printf("Error: Identifier too long\n");
-                exit(1);
+                addLexeme(buffer, error, "Error: Identifier too long");
+                while (isalnum(source[i])) i++; // Skip the rest of the identifier
+                continue;
             }
             token_type token = getReservedWordToken(buffer);
-            addLexeme(buffer, token);
+            addLexeme(buffer, token, NULL);
             addToken(token, buffer);
             continue;
         }
@@ -136,14 +147,16 @@ void lexicalAnalyzer(const char *source) {
         if (isdigit(source[i])) {
             char buffer[6] = {0};
             int j = 0;
-            while (isdigit(source[i]) && j < 5) {
+            while (isdigit(source[i]) && j < MAX_NUMBER_LENGTH) {
                 buffer[j++] = source[i++];
             }
+            buffer[j] = '\0'; // Ensure null-terminated
             if (isdigit(source[i])) {
-                printf("Error: Number too long\n");
-                exit(1);
+                addLexeme(buffer, error, "Error: Number too long");
+                while (isdigit(source[i])) i++; // Skip the rest of the number
+                continue;
             }
-            addLexeme(buffer, numbersym);
+            addLexeme(buffer, numbersym, NULL);
             addToken(numbersym, buffer);
             continue;
         }
@@ -159,10 +172,10 @@ void lexicalAnalyzer(const char *source) {
         }
         token_type token = getSpecialSymbolToken(buffer);
         if (token == skipsym) {
-            printf("Error: Invalid symbol %s\n", buffer);
-            exit(1);
+            addLexeme(buffer, error, "Error: Invalid symbol");
+            continue;
         }
-        addLexeme(buffer, token);
+        addLexeme(buffer, token, NULL);
         addToken(token, buffer);
     }
 }
@@ -194,13 +207,20 @@ int main(int argc, char *argv[]) {
     printf("Lexeme Table:\n");
     printf("\nlexeme token type\n");
     for (int i = 0; i < lexemeCount; i++) {
-        printf("%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
+        if (lexemes[i].token == error) {
+            printf("%-15s %s\n", lexemes[i].lexeme, lexemes[i].errorMessage);
+        } else {
+            printf("%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
+        }
     }
 
     // Output the token list
     printf("Token List:\n");
     for (int i = 0; i < tokenCount; i++) {
-        printf("%d %s", tokens[i].token, tokens[i].value);
+        printf("%d", tokens[i].token);
+        if (tokens[i].token == identsym || tokens[i].token == numbersym) {
+            printf(" %s", tokens[i].value);
+        }
         if (i < tokenCount - 1) {
             printf(" ");
         }
