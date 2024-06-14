@@ -31,7 +31,7 @@ typedef enum {
 typedef struct {
     char lexeme[12];
     token_type token;
-    char errorMessage[50];
+    char errorMessage[50]; // Added field to store error messages
 } Lexeme;
 typedef struct {
     token_type token;
@@ -47,7 +47,7 @@ const token_type reservedTokens[] = {
     constsym, varsym, procsym, callsym, beginsym, endsym, ifsym, fisym, thensym, elsesym, whilesym, dosym, readsym, writesym
 };
 const char *specialSymbols[] = {
-    "+", "-", "*", "/", "(", ")", "=", ",", ".", "<", ">", ";", ":="
+    "+", "-", "*", "/", "(", ")", "=", ",", ".", "<", ">", ";", ":=", "<>"
 };
 const token_type specialTokens[] = {
     plussym, minussym, multsym, slashsym, lparentsym, rparentsym, eqsym, commasym, periodsym, lessym, gtrsym, semicolonsym, becomessym
@@ -172,11 +172,23 @@ void lexicalAnalyzer(const char *source) {
         }
         token_type token = getSpecialSymbolToken(buffer);
         if (token == skipsym) {
-            addLexeme(buffer, error, "Error: Invalid symbol");
-            continue;
+            // Handle specific cases for two-character symbols
+            if (buffer[0] == '<' && buffer[1] == '>') {
+                token = neqsym;
+            } else if (buffer[0] == '<' && buffer[1] == '=') {
+                token = leqsym;
+            } else if (buffer[0] == '>' && buffer[1] == '=') {
+                token = geqsym;
+            } else if (buffer[0] == ':' && buffer[1] == '=') {
+                token = becomessym;
+            } else {
+                addLexeme(buffer, error, "Error: Invalid symbol");
+                continue;
+            }
         }
         addLexeme(buffer, token, NULL);
         addToken(token, buffer);
+
     }
 }
 
