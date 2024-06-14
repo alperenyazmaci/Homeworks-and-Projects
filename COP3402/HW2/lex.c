@@ -15,6 +15,7 @@
 //Define MAX values
 #define MAX_LEXEMES 1000
 #define MAX_TOKENS 1000
+#define MAX_SOURCE_SIZE 10000
 
 //Enum Alias and Definition
 typedef enum {
@@ -165,9 +166,22 @@ void lexicalAnalyzer(const char *source) {
     }
 }
 
-int main() {
-    // Read the source program
-    char sourceProgram[] = "var x, y; begin y := 3; x := y + 56; end.";
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <source file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *file = fopen(argv[1], "r");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    char sourceProgram[MAX_SOURCE_SIZE];
+    size_t sourceSize = fread(sourceProgram, 1, MAX_SOURCE_SIZE - 1, file);
+    fclose(file);
+    sourceProgram[sourceSize] = '\0';
 
     // Perform lexical analysis
     lexicalAnalyzer(sourceProgram);
