@@ -57,6 +57,7 @@ Token tokens[MAX_TOKENS];
 int lexemeCount = 0;
 int tokenCount = 0;
 
+
 void addLexeme(const char *lexeme, token_type token) {
     strcpy(lexemes[lexemeCount].lexeme, lexeme);
     lexemes[lexemeCount].token = token;
@@ -199,7 +200,10 @@ int main(int argc, char *argv[]) {
     // Output the token list
     printf("Token List:\n");
     for (int i = 0; i < tokenCount; i++) {
-        printf("%d %s ", tokens[i].token, tokens[i].value);
+        printf("%d %s", tokens[i].token, tokens[i].value);
+        if (i < tokenCount - 1) {
+            printf(" ");
+        }
     }
     printf("\n");
 
