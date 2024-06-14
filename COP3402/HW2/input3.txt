@@ -1,0 +1,23 @@
+const a = 10, b = 20;
+var x, y, z;
+/* This is a comment */
+procedure foo;
+begin
+    x := a + b * (x - y / z);
+    call foo;
+    if x = y then
+        x := x + 1
+    else
+        x := x - 1111111;
+    while x < 10 do
+        x := x + 1;
+    read 4hello hello4;
+    write xxxxxxxxxxxxxx;
+end.
+/ * Not a comment * /
+/* unterminated comment * /
+/* unterminated comment
+/*is a comment*/
+x8x8x8x := 12345;
+: =
+><<><>>

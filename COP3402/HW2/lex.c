@@ -191,8 +191,9 @@ int main(int argc, char *argv[]) {
 
     // Output the lexeme table
     printf("Lexeme Table:\n");
+    printf("\nlexeme token type\n");
     for (int i = 0; i < lexemeCount; i++) {
-        printf("%s %d\n", lexemes[i].lexeme, lexemes[i].token);
+        printf("%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
     }
 
     // Output the token list
