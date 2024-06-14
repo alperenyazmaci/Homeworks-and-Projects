@@ -97,10 +97,19 @@ void lexicalAnalyzer(const char *source) {
         // Handle comments
         if (source[i] == '/' && source[i + 1] == '*') {
             i += 2;
-            while (!(source[i] == '*' && source[i + 1] == '/')) {
+            int comment_closed = 0;
+            while (source[i] != '\0') {
+                if (source[i] == '*' && source[i + 1] == '/') {
+                    i += 2;
+                    comment_closed = 1;
+                    break;
+                }
                 i++;
             }
-            i += 2;
+            if (!comment_closed) {
+                printf("Error: Improperly enclosed comment\n");
+                exit(1);
+            }
             continue;
         }
 
@@ -137,12 +146,14 @@ void lexicalAnalyzer(const char *source) {
             continue;
         }
 
-        // Handle special symbols
+        // Handle complex token sequences and special symbols
         char buffer[3] = {0};
         buffer[0] = source[i++];
-        if (buffer[0] == ':' && source[i] == '=') {
-            buffer[1] = '=';
-            i++;
+        if ((buffer[0] == ':' && source[i] == '=') || 
+            (buffer[0] == '<' && source[i] == '>') || 
+            (buffer[0] == '<' && source[i] == '=') || 
+            (buffer[0] == '>' && source[i] == '=')) {
+            buffer[1] = source[i++];
         }
         token_type token = getSpecialSymbolToken(buffer);
         if (token == skipsym) {
