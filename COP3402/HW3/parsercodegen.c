@@ -518,10 +518,10 @@ void mark_symbols() {
 
 void print_symbol_table() {
     printf("Symbol Table:\n");
-    printf("Kind | Name | Value | Level | Address | Mark\n");
+    printf("Kind | Name       | Value | Level | Address | Mark\n");
     printf("---------------------------------------------------\n");
     for (int i = 0; i < symbol_table_index; i++) {
-        printf("%d | %s | %d | %d | %d | %d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val,
+        printf("   %d | %10s | %5d | %5d | %5d | %5d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val,
                symbol_table[i].level, symbol_table[i].addr, symbol_table[i].mark);
     }
 }
@@ -535,9 +535,19 @@ void emit(int op, int l, int m) {
 
 void print_code() {
     printf("Generated Code:\n");
-    printf("Line OP L M\n");
+    printf("Line    OP    L    M\n");
     for (int i = 0; i < code_index; i++) {
-        printf("%d %d %d %d\n", i, code[i].op, code[i].l, code[i].m);
+        char op[4];
+        if(code[i].op == 1) strcpy(op, "LIT");
+        else if(code[i].op == 2) strcpy(op, "OPR");
+        else if(code[i].op == 3) strcpy(op, "LOD");
+        else if(code[i].op == 4) strcpy(op, "STO");
+        else if(code[i].op == 5) strcpy(op, "CAL");
+        else if(code[i].op == 6) strcpy(op, "INC");
+        else if(code[i].op == 7) strcpy(op, "JMP");
+        else if(code[i].op == 8) strcpy(op, "JPC");
+        else if(code[i].op == 9) strcpy(op, "SYS");
+        printf("%3d %6s %4d %4d\n", i, op, code[i].l, code[i].m);
     }
 }
 
