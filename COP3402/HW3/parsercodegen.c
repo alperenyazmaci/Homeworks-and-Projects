@@ -535,8 +535,9 @@ void emit(int op, int l, int m) {
 
 void print_code() {
     printf("Generated Code:\n");
+    printf("Line OP L M\n");
     for (int i = 0; i < code_index; i++) {
-        printf("%d %d %d\n", code[i].op, code[i].l, code[i].m);
+        printf("%d %d %d %d\n", i, code[i].op, code[i].l, code[i].m);
     }
 }
 
