@@ -317,7 +317,6 @@ void print_error(const char *message)
 }
 
 // Recursive Descent Parser and Intermediate Code Generator
-
 void program()
 {
     block();
@@ -711,47 +710,47 @@ int main(int argc, char *argv[])
     }
 
     // Output the source program
-    printf("Source Program:\n%s\n\n", sourceProgram);
+    // printf("Source Program:\n%s\n\n", sourceProgram);
     fprintf(outputFile, "Source Program:\n%s\n\n", sourceProgram);
 
     // Output the lexeme table
-    printf("Lexeme Table:\n");
+    // printf("Lexeme Table:\n");
     fprintf(outputFile, "Lexeme Table:\n");
-    printf("\nlexeme token type\n");
+    // printf("\nlexeme token type\n");
     fprintf(outputFile, "\nlexeme token type\n");
     for (int i = 0; i < lexemeCount; i++)
     {
         if (lexemes[i].token == error_token)
         {
-            printf("%-15s %s\n", lexemes[i].lexeme, lexemes[i].errorMessage);
+            // printf("%-15s %s\n", lexemes[i].lexeme, lexemes[i].errorMessage);
             fprintf(outputFile, "%-15s %s\n", lexemes[i].lexeme, lexemes[i].errorMessage);
         }
         else
         {
-            printf("%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
+            // printf("%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
             fprintf(outputFile, "%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
         }
     }
 
     // Output the token list
-    printf("\nToken List:\n");
+    // printf("\nToken List:\n");
     fprintf(outputFile, "\nToken List:\n");
     for (int i = 0; i < tokenCount; i++)
     {
-        printf("%d", tokens[i].token);
+        // printf("%d", tokens[i].token);
         fprintf(outputFile, "%d", tokens[i].token);
         if (tokens[i].token == identsym || tokens[i].token == numbersym)
         {
-            printf(" %s", tokens[i].value);
+            // printf(" %s", tokens[i].value);
             fprintf(outputFile, " %s", tokens[i].value);
         }
         if (i < tokenCount - 1)
         {
-            printf(" ");
+            // printf(" ");
             fprintf(outputFile, " ");
         }
     }
-    printf("\n");
+    // printf("\n");
     fprintf(outputFile, "\n");
 
     // Close the output file
