@@ -22,78 +22,50 @@
 #define MAX_CODE_LENGTH 500 // Define MAX_CODE_LENGTH for the instruction array size
 
 // Enum alias and definition
-typedef enum
-{
-    nulsym = 1,
-    identsym,
-    numbersym,
-    plussym,
-    minussym,
-    multsym,
-    slashsym,
-    oddsym,
-    eqsym,
-    neqsym,
-    lessym,
-    leqsym,
-    gtrsym,
-    geqsym,
-    lparentsym,
-    rparentsym,
-    commasym,
-    semicolonsym,
-    periodsym,
-    becomessym,
-    beginsym,
-    endsym,
-    ifsym,
-    thensym,
-    whilesym,
-    dosym,
-    callsym,
-    constsym,
-    varsym,
-    procsym,
-    writesym,
-    readsym,
-    elsesym,
-    error_token
+typedef enum {
+    nulsym = 1, identsym, numbersym, plussym, minussym,
+    multsym, slashsym, oddsym, eqsym, neqsym, lessym, leqsym,
+    gtrsym, geqsym, lparentsym, rparentsym, commasym, semicolonsym,
+    periodsym, becomessym, beginsym, endsym, ifsym, thensym,
+    whilesym, dosym, callsym, constsym, varsym, procsym, writesym,
+    readsym, elsesym, error_token
 } token_type;
 
 // Struct aliases and definitions
-typedef struct
-{
+typedef struct {
     char lexeme[12];
     token_type token;
     char errorMessage[50];
 } Lexeme;
-typedef struct
-{
+typedef struct {
     token_type token;
     char value[12];
 } Token;
 
 // Symbol table entry
-typedef struct
-{
-    int kind;      // const = 1, var = 2
+typedef struct {
+    int kind; // const = 1, var = 2
     char name[10]; // name up to 11 chars
-    int val;       // number (ASCII value)
-    int level;     // L level
-    int addr;      // M address
-    int mark;      // to indicate unavailable or deleted
+    int val; // number (ASCII value)
+    int level; // L level
+    int addr; // M address
+    int mark; // to indicate unavailable or deleted
 } symbol;
 
 // Initialize reserved and special words and tokens as constants
 const char *reservedWords[] = {
-    "const", "var", "procedure", "call", "begin", "end", "if", "fi", "then",
-    "else", "while", "do", "read", "write"};
+    "const", "var", "procedure", "call", "begin", "end", "if", "fi", "then", 
+    "else", "while", "do", "read", "write"
+};
 const token_type reservedTokens[] = {
-    constsym, varsym, procsym, callsym, beginsym, endsym, ifsym, oddsym, thensym, elsesym, whilesym, dosym, readsym, writesym};
+    constsym, varsym, procsym, callsym, beginsym, endsym, ifsym, oddsym, thensym, elsesym, whilesym, dosym, readsym, writesym
+};
 const char *specialSymbols[] = {
-    "+", "-", "*", "/", "(", ")", "=", ",", ".", "<", ">", ";", ":=", "<>"};
+    "+", "-", "*", "/", "(", ")", "=", ",", ".", "<", ">", ";", ":=", "<>"
+};
 const token_type specialTokens[] = {
-    plussym, minussym, multsym, slashsym, lparentsym, rparentsym, eqsym, commasym, periodsym, lessym, gtrsym, semicolonsym, becomessym};
+    plussym, minussym, multsym, slashsym, lparentsym, rparentsym, eqsym, commasym, periodsym, lessym, gtrsym, semicolonsym, becomessym
+};
 
 // Initialize the global variables
 Lexeme lexemes[MAX_LEXEMES];
@@ -105,8 +77,7 @@ symbol symbol_table[MAX_SYMBOL_TABLE_SIZE];
 int symbol_table_index = 0;
 
 // Code generation variables
-typedef struct
-{
+typedef struct {
     int op;
     int l;
     int m;
@@ -135,28 +106,25 @@ int symbol_table_check(char *name);
 void add_to_symbol_table(int kind, char *name, int val, int level, int addr);
 void print_symbol_table();
 void emit(int op, int l, int m);
+void print_code();
+void mark_symbols();
 
 // Function to add a lexeme to the Lexeme array
-void addLexeme(const char *lexeme, token_type token, const char *errorMessage)
-{
+void addLexeme(const char *lexeme, token_type token, const char *errorMessage) {
     strncpy(lexemes[lexemeCount].lexeme, lexeme, sizeof(lexemes[lexemeCount].lexeme) - 1);
     lexemes[lexemeCount].lexeme[sizeof(lexemes[lexemeCount].lexeme) - 1] = '\0';
     lexemes[lexemeCount].token = token;
-    if (errorMessage != NULL)
-    {
+    if (errorMessage != NULL) {
         strncpy(lexemes[lexemeCount].errorMessage, errorMessage, sizeof(lexemes[lexemeCount].errorMessage) - 1);
         lexemes[lexemeCount].errorMessage[sizeof(lexemes[lexemeCount].errorMessage) - 1] = '\0';
-    }
-    else
-    {
+    } else {
         lexemes[lexemeCount].errorMessage[0] = '\0';
     }
     lexemeCount++;
 }
 
 // Function to add a token to the Token array
-void addToken(token_type token, const char *value)
-{
+void addToken(token_type token, const char *value) {
     tokens[tokenCount].token = token;
     strncpy(tokens[tokenCount].value, value, sizeof(tokens[tokenCount].value) - 1);
     tokens[tokenCount].value[sizeof(tokens[tokenCount].value) - 1] = '\0';
@@ -164,12 +132,9 @@ void addToken(token_type token, const char *value)
 }
 
 // Function to check if a string is a reserved word
-token_type getReservedWordToken(const char *word)
-{
-    for (int i = 0; i < sizeof(reservedWords) / sizeof(reservedWords[0]); i++)
-    {
-        if (strcmp(word, reservedWords[i]) == 0)
-        {
+token_type getReservedWordToken(const char *word) {
+    for (int i = 0; i < sizeof(reservedWords) / sizeof(reservedWords[0]); i++) {
+        if (strcmp(word, reservedWords[i]) == 0) {
             return reservedTokens[i];
         }
     }
@@ -177,12 +142,9 @@ token_type getReservedWordToken(const char *word)
 }
 
 // Function to check if a string is a special symbol
-token_type getSpecialSymbolToken(const char *symbol)
-{
-    for (int i = 0; i < sizeof(specialSymbols) / sizeof(specialSymbols[0]); i++)
-    {
-        if (strcmp(symbol, specialSymbols[i]) == 0)
-        {
+token_type getSpecialSymbolToken(const char *symbol) {
+    for (int i = 0; i < sizeof(specialSymbols) / sizeof(specialSymbols[0]); i++) {
+        if (strcmp(symbol, specialSymbols[i]) == 0) {
             return specialTokens[i];
         }
     }
@@ -190,34 +152,27 @@ token_type getSpecialSymbolToken(const char *symbol)
 }
 
 // The function that goes over source and lexical analyzes the source string
-void lexicalAnalyzer(const char *source)
-{
+void lexicalAnalyzer(const char *source) {
     int i = 0;
-    while (source[i] != '\0')
-    {
-        if (isspace(source[i]))
-        {
+    while (source[i] != '\0') {
+        if (isspace(source[i])) {
             i++;
             continue;
         }
 
         // Handle comments
-        if (source[i] == '/' && source[i + 1] == '*')
-        {
+        if (source[i] == '/' && source[i + 1] == '*') {
             i += 2;
             int comment_closed = 0;
-            while (source[i] != '\0')
-            {
-                if (source[i] == '*' && source[i + 1] == '/')
-                {
+            while (source[i] != '\0') {
+                if (source[i] == '*' && source[i + 1] == '/') {
                     i += 2;
                     comment_closed = 1;
                     break;
                 }
                 i++;
             }
-            if (!comment_closed)
-            {
+            if (!comment_closed) {
                 addLexeme("/*", error_token, "Error: unclosed comment");
                 continue;
             }
@@ -225,20 +180,16 @@ void lexicalAnalyzer(const char *source)
         }
 
         // Handle identifiers and reserved words
-        if (isalpha(source[i]))
-        {
+        if (isalpha(source[i])) {
             char buffer[12] = {0};
             int j = 0;
-            while (isalnum(source[i]) && j < MAX_IDENTIFIER_LENGTH)
-            {
+            while (isalnum(source[i]) && j < MAX_IDENTIFIER_LENGTH) {
                 buffer[j++] = source[i++];
             }
             buffer[j] = '\0'; // Ensure null-terminated
-            if (isalnum(source[i]))
-            {
+            if (isalnum(source[i])) {
                 addLexeme(buffer, error_token, "Error: Identifier too long");
-                while (isalnum(source[i]))
-                    i++; // Skip the rest of the identifier
+                while (isalnum(source[i])) i++; // Skip the rest of the identifier
                 continue;
             }
             token_type token = getReservedWordToken(buffer);
@@ -248,20 +199,16 @@ void lexicalAnalyzer(const char *source)
         }
 
         // Handle numbers
-        if (isdigit(source[i]))
-        {
+        if (isdigit(source[i])) {
             char buffer[6] = {0};
             int j = 0;
-            while (isdigit(source[i]) && j < MAX_NUMBER_LENGTH)
-            {
+            while (isdigit(source[i]) && j < MAX_NUMBER_LENGTH) {
                 buffer[j++] = source[i++];
             }
             buffer[j] = '\0';
-            if (isdigit(source[i]))
-            {
+            if (isdigit(source[i])) {
                 addLexeme(buffer, error_token, "Error: Number too long");
-                while (isdigit(source[i]))
-                    i++;
+                while (isdigit(source[i])) i++;
                 continue;
             }
             addLexeme(buffer, numbersym, NULL);
@@ -272,35 +219,24 @@ void lexicalAnalyzer(const char *source)
         // Handle complex token sequences and special symbols
         char buffer[3] = {0};
         buffer[0] = source[i++];
-        if ((buffer[0] == ':' && source[i] == '=') ||
-            (buffer[0] == '<' && source[i] == '>') ||
-            (buffer[0] == '<' && source[i] == '=') ||
-            (buffer[0] == '>' && source[i] == '='))
-        {
+        if ((buffer[0] == ':' && source[i] == '=') || 
+            (buffer[0] == '<' && source[i] == '>') || 
+            (buffer[0] == '<' && source[i] == '=') || 
+            (buffer[0] == '>' && source[i] == '=')) {
             buffer[1] = source[i++];
         }
         token_type token = getSpecialSymbolToken(buffer);
-        if (token == nulsym)
-        {
+        if (token == nulsym) {
             // Handle specific cases for two-character symbols
-            if (buffer[0] == '<' && buffer[1] == '>')
-            {
+            if (buffer[0] == '<' && buffer[1] == '>') {
                 token = neqsym;
-            }
-            else if (buffer[0] == '<' && buffer[1] == '=')
-            {
+            } else if (buffer[0] == '<' && buffer[1] == '=') {
                 token = leqsym;
-            }
-            else if (buffer[0] == '>' && buffer[1] == '=')
-            {
+            } else if (buffer[0] == '>' && buffer[1] == '=') {
                 token = geqsym;
-            }
-            else if (buffer[0] == ':' && buffer[1] == '=')
-            {
+            } else if (buffer[0] == ':' && buffer[1] == '=') {
                 token = becomessym;
-            }
-            else
-            {
+            } else {
                 addLexeme(buffer, error_token, "Error: Invalid symbol");
                 continue;
             }
@@ -310,54 +246,46 @@ void lexicalAnalyzer(const char *source)
     }
 }
 
-void print_error(const char *message)
-{
+void print_error(const char *message) {
     printf("Error: %s\n", message);
     exit(1);
 }
 
 // Recursive Descent Parser and Intermediate Code Generator
-void program()
-{
+
+void program() {
+    emit(7, 0, 3); // JMP to main block
     block();
-    if (tokens[current_token].token != periodsym)
-    {
+    if (tokens[current_token].token != periodsym) {
         print_error("program must end with period");
     }
     emit(9, 0, 3); // HALT
 }
 
-void block()
-{
+void block() {
     const_declaration();
     int numVars = var_declaration();
     emit(6, 0, numVars + 3); // INC
     statement();
 }
 
-void const_declaration()
-{
-    if (tokens[current_token].token == constsym)
-    {
-        do
-        {
+void const_declaration() {
+    if (tokens[current_token].token == constsym) {
+        do {
             current_token++;
-            if (tokens[current_token].token != identsym)
-            {
+            if (tokens[current_token].token != identsym) {
                 print_error("const keyword must be followed by identifier");
             }
             char const_name[12];
             strcpy(const_name, tokens[current_token].value);
 
             current_token++;
-            if (tokens[current_token].token != eqsym)
-            {
+            if (tokens[current_token].token != eqsym) {
                 print_error("constants must be assigned with =");
             }
 
             current_token++;
-            if (tokens[current_token].token != numbersym)
-            {
+            if (tokens[current_token].token != numbersym) {
                 print_error("constants must be assigned an integer value");
             }
             int const_value = atoi(tokens[current_token].value);
@@ -367,33 +295,27 @@ void const_declaration()
             current_token++;
         } while (tokens[current_token].token == commasym);
 
-        if (tokens[current_token].token != semicolonsym)
-        {
+        if (tokens[current_token].token != semicolonsym) {
             print_error("constant declarations must be followed by a semicolon");
         }
         current_token++;
     }
 }
 
-int var_declaration()
-{
+int var_declaration() {
     int numVars = 0;
-    if (tokens[current_token].token == varsym)
-    {
-        do
-        {
+    if (tokens[current_token].token == varsym) {
+        do {
             numVars++;
             current_token++;
-            if (tokens[current_token].token != identsym)
-            {
+            if (tokens[current_token].token != identsym) {
                 print_error("var keyword must be followed by identifier");
             }
             add_to_symbol_table(2, tokens[current_token].value, 0, 0, numVars + 2);
             current_token++;
         } while (tokens[current_token].token == commasym);
 
-        if (tokens[current_token].token != semicolonsym)
-        {
+        if (tokens[current_token].token != semicolonsym) {
             print_error("variable declarations must be followed by a semicolon");
         }
         current_token++;
@@ -401,170 +323,125 @@ int var_declaration()
     return numVars;
 }
 
-void statement()
-{
-    if (tokens[current_token].token == identsym)
-    {
+void statement() {
+    if (tokens[current_token].token == identsym) {
         int symIdx = symbol_table_check(tokens[current_token].value);
-        if (symIdx == -1)
-        {
+        if (symIdx == -1) {
             print_error("undeclared identifier");
         }
-        if (symbol_table[symIdx].kind != 2)
-        {
+        if (symbol_table[symIdx].kind != 2) {
             print_error("only variable values may be altered");
         }
         current_token++;
-        if (tokens[current_token].token != becomessym)
-        {
+        if (tokens[current_token].token != becomessym) {
             print_error("assignment statements must use :=");
         }
         current_token++;
         expression();
         emit(4, 0, symbol_table[symIdx].addr); // STO
-    }
-    else if (tokens[current_token].token == beginsym)
-    {
-        do
-        {
+    } else if (tokens[current_token].token == beginsym) {
+        do {
             current_token++;
             statement();
         } while (tokens[current_token].token == semicolonsym);
-        if (tokens[current_token].token != endsym)
-        {
+        if (tokens[current_token].token != endsym) {
             print_error("begin must be followed by end");
         }
         current_token++;
-    }
-    else if (tokens[current_token].token == ifsym)
-    {
+    } else if (tokens[current_token].token == ifsym) {
         current_token++;
         condition();
         int jpcIdx = code_index;
         emit(8, 0, 0); // JPC
-        if (tokens[current_token].token != thensym)
-        {
+        if (tokens[current_token].token != thensym) {
             print_error("if must be followed by then");
         }
         current_token++;
         statement();
         code[jpcIdx].m = code_index;
-    }
-    else if (tokens[current_token].token == whilesym)
-    {
+    } else if (tokens[current_token].token == whilesym) {
         current_token++;
         int loopIdx = code_index;
         condition();
         int jpcIdx = code_index;
         emit(8, 0, 0); // JPC
-        if (tokens[current_token].token != dosym)
-        {
+        if (tokens[current_token].token != dosym) {
             print_error("while must be followed by do");
         }
         current_token++;
         statement();
         emit(7, 0, loopIdx); // JMP
         code[jpcIdx].m = code_index;
-    }
-    else if (tokens[current_token].token == readsym)
-    {
+    } else if (tokens[current_token].token == readsym) {
         current_token++;
-        if (tokens[current_token].token != identsym)
-        {
+        if (tokens[current_token].token != identsym) {
             print_error("read keyword must be followed by identifier");
         }
         int symIdx = symbol_table_check(tokens[current_token].value);
-        if (symIdx == -1)
-        {
+        if (symIdx == -1) {
             print_error("undeclared identifier");
         }
-        if (symbol_table[symIdx].kind != 2)
-        {
+        if (symbol_table[symIdx].kind != 2) {
             print_error("only variable values may be altered");
         }
         current_token++;
-        emit(9, 0, 2);                         // READ
+        emit(9, 0, 2); // READ
         emit(4, 0, symbol_table[symIdx].addr); // STO
-    }
-    else if (tokens[current_token].token == writesym)
-    {
+    } else if (tokens[current_token].token == writesym) {
         current_token++;
         expression();
         emit(9, 0, 1); // WRITE
     }
 }
 
-void condition()
-{
-    if (tokens[current_token].token == oddsym)
-    {
+void condition() {
+    if (tokens[current_token].token == oddsym) {
         current_token++;
         expression();
         emit(2, 0, 6); // ODD
-    }
-    else
-    {
+    } else {
         expression();
-        if (tokens[current_token].token == eqsym)
-        {
+        if (tokens[current_token].token == eqsym) {
             current_token++;
             expression();
             emit(2, 0, 8); // EQL
-        }
-        else if (tokens[current_token].token == neqsym)
-        {
+        } else if (tokens[current_token].token == neqsym) {
             current_token++;
             expression();
             emit(2, 0, 9); // NEQ
-        }
-        else if (tokens[current_token].token == lessym)
-        {
+        } else if (tokens[current_token].token == lessym) {
             current_token++;
             expression();
             emit(2, 0, 10); // LSS
-        }
-        else if (tokens[current_token].token == leqsym)
-        {
+        } else if (tokens[current_token].token == leqsym) {
             current_token++;
             expression();
             emit(2, 0, 11); // LEQ
-        }
-        else if (tokens[current_token].token == gtrsym)
-        {
+        } else if (tokens[current_token].token == gtrsym) {
             current_token++;
             expression();
             emit(2, 0, 12); // GTR
-        }
-        else if (tokens[current_token].token == geqsym)
-        {
+        } else if (tokens[current_token].token == geqsym) {
             current_token++;
             expression();
             emit(2, 0, 13); // GEQ
-        }
-        else
-        {
+        } else {
             print_error("condition must contain comparison operator");
         }
     }
 }
 
-void expression()
-{
-    if (tokens[current_token].token == plussym || tokens[current_token].token == minussym)
-    {
+void expression() {
+    if (tokens[current_token].token == plussym || tokens[current_token].token == minussym) {
         current_token++;
     }
     term();
-    while (tokens[current_token].token == plussym || tokens[current_token].token == minussym)
-    {
-        if (tokens[current_token].token == plussym)
-        {
+    while (tokens[current_token].token == plussym || tokens[current_token].token == minussym) {
+        if (tokens[current_token].token == plussym) {
             current_token++;
             term();
             emit(2, 0, 2); // ADD
-        }
-        else
-        {
+        } else {
             current_token++;
             term();
             emit(2, 0, 3); // SUB
@@ -572,19 +449,14 @@ void expression()
     }
 }
 
-void term()
-{
+void term() {
     factor();
-    while (tokens[current_token].token == multsym || tokens[current_token].token == slashsym)
-    {
-        if (tokens[current_token].token == multsym)
-        {
+    while (tokens[current_token].token == multsym || tokens[current_token].token == slashsym) {
+        if (tokens[current_token].token == multsym) {
             current_token++;
             factor();
             emit(2, 0, 4); // MUL
-        }
-        else
-        {
+        } else {
             current_token++;
             factor();
             emit(2, 0, 5); // DIV
@@ -592,60 +464,43 @@ void term()
     }
 }
 
-void factor()
-{
-    if (tokens[current_token].token == identsym)
-    {
+void factor() {
+    if (tokens[current_token].token == identsym) {
         int symIdx = symbol_table_check(tokens[current_token].value);
-        if (symIdx == -1)
-        {
+        if (symIdx == -1) {
             print_error("undeclared identifier");
         }
         current_token++;
-        if (symbol_table[symIdx].kind == 1)
-        {                                         // const
+        if (symbol_table[symIdx].kind == 1) { // const
             emit(1, 0, symbol_table[symIdx].val); // LIT
-        }
-        else
-        {                                          // var
+        } else { // var
             emit(3, 0, symbol_table[symIdx].addr); // LOD
         }
-    }
-    else if (tokens[current_token].token == numbersym)
-    {
+    } else if (tokens[current_token].token == numbersym) {
         emit(1, 0, atoi(tokens[current_token].value)); // LIT
         current_token++;
-    }
-    else if (tokens[current_token].token == lparentsym)
-    {
+    } else if (tokens[current_token].token == lparentsym) {
         current_token++;
         expression();
-        if (tokens[current_token].token != rparentsym)
-        {
+        if (tokens[current_token].token != rparentsym) {
             print_error("right parenthesis must follow left parenthesis");
         }
         current_token++;
-    }
-    else
-    {
+    } else {
         print_error("arithmetic equations must contain operands, parentheses, numbers, or symbols");
     }
 }
 
-int symbol_table_check(char *name)
-{
-    for (int i = 0; i < symbol_table_index; i++)
-    {
-        if (strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].mark == 0)
-        {
+int symbol_table_check(char *name) {
+    for (int i = 0; i < symbol_table_index; i++) {
+        if (strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].mark == 0) {
             return i;
         }
     }
     return -1;
 }
 
-void add_to_symbol_table(int kind, char *name, int val, int level, int addr)
-{
+void add_to_symbol_table(int kind, char *name, int val, int level, int addr) {
     symbol_table[symbol_table_index].kind = kind;
     strcpy(symbol_table[symbol_table_index].name, name);
     symbol_table[symbol_table_index].val = val;
@@ -655,39 +510,46 @@ void add_to_symbol_table(int kind, char *name, int val, int level, int addr)
     symbol_table_index++;
 }
 
-void print_symbol_table()
-{
+void mark_symbols() {
+    for (int i = 0; i < symbol_table_index; i++) {
+        symbol_table[i].mark = 1;
+    }
+}
+
+void print_symbol_table() {
     printf("Symbol Table:\n");
     printf("Kind | Name | Value | Level | Address | Mark\n");
     printf("---------------------------------------------------\n");
-    for (int i = 0; i < symbol_table_index; i++)
-    {
+    for (int i = 0; i < symbol_table_index; i++) {
         printf("%d | %s | %d | %d | %d | %d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val,
                symbol_table[i].level, symbol_table[i].addr, symbol_table[i].mark);
     }
 }
 
-void emit(int op, int l, int m)
-{
+void emit(int op, int l, int m) {
     code[code_index].op = op;
     code[code_index].l = l;
     code[code_index].m = m;
     code_index++;
 }
 
-int main(int argc, char *argv[])
-{
+void print_code() {
+    printf("Generated Code:\n");
+    for (int i = 0; i < code_index; i++) {
+        printf("%d %d %d\n", code[i].op, code[i].l, code[i].m);
+    }
+}
+
+int main(int argc, char *argv[]) {
     // Exit program if there is no input file
-    if (argc != 2)
-    {
+    if (argc != 2) {
         printf("Usage: %s <source file>\n", argv[0]);
         return 1;
     }
 
     // Open the input file
     FILE *file = fopen(argv[1], "r");
-    if (!file)
-    {
+    if (!file) {
         perror("Error opening file");
         return 1;
     }
@@ -703,8 +565,7 @@ int main(int argc, char *argv[])
 
     // Open output.txt for writing
     FILE *outputFile = fopen("output.txt", "w");
-    if (!outputFile)
-    {
+    if (!outputFile) {
         perror("Error opening output file");
         return 1;
     }
@@ -718,15 +579,11 @@ int main(int argc, char *argv[])
     fprintf(outputFile, "Lexeme Table:\n");
     // printf("\nlexeme token type\n");
     fprintf(outputFile, "\nlexeme token type\n");
-    for (int i = 0; i < lexemeCount; i++)
-    {
-        if (lexemes[i].token == error_token)
-        {
+    for (int i = 0; i < lexemeCount; i++) {
+        if (lexemes[i].token == error_token) {
             // printf("%-15s %s\n", lexemes[i].lexeme, lexemes[i].errorMessage);
             fprintf(outputFile, "%-15s %s\n", lexemes[i].lexeme, lexemes[i].errorMessage);
-        }
-        else
-        {
+        } else {
             // printf("%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
             fprintf(outputFile, "%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
         }
@@ -735,17 +592,14 @@ int main(int argc, char *argv[])
     // Output the token list
     // printf("\nToken List:\n");
     fprintf(outputFile, "\nToken List:\n");
-    for (int i = 0; i < tokenCount; i++)
-    {
+    for (int i = 0; i < tokenCount; i++) {
         // printf("%d", tokens[i].token);
         fprintf(outputFile, "%d", tokens[i].token);
-        if (tokens[i].token == identsym || tokens[i].token == numbersym)
-        {
+        if (tokens[i].token == identsym || tokens[i].token == numbersym) {
             // printf(" %s", tokens[i].value);
             fprintf(outputFile, " %s", tokens[i].value);
         }
-        if (i < tokenCount - 1)
-        {
+        if (i < tokenCount - 1) {
             // printf(" ");
             fprintf(outputFile, " ");
         }
@@ -759,15 +613,15 @@ int main(int argc, char *argv[])
     // Parse the program
     program();
 
-    // Output the symbol table
-    print_symbol_table();
+    // Mark all symbols as available
+    mark_symbols();
 
     // Output the generated code
-    printf("Generated Code:\n");
-    for (int i = 0; i < code_index; i++)
-    {
-        printf("%d %d %d\n", code[i].op, code[i].l, code[i].m);
-    }
+    print_code();
+    printf("\n");
+
+    // Output the symbol table
+    print_symbol_table();
 
     printf("Program parsed successfully.\n");
 
