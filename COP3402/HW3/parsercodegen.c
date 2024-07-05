@@ -398,7 +398,6 @@ void statement() {
     }
 }
 
-
 void condition() {
     if (tokens[current_token].token == oddsym) {
         current_token++;
