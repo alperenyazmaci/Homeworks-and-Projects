@@ -254,7 +254,7 @@ void print_error(const char *message) {
 // Recursive Descent Parser and Intermediate Code Generator
 
 void program() {
-    emit(7, 0, 13); // JMP to main block
+    emit(7, 0, 3); // JMP to main block
     block();
     if (tokens[current_token].token != periodsym) {
         print_error("program must end with period");
@@ -358,10 +358,10 @@ void statement() {
         }
         current_token++;
         statement();
-        code[jpcIdx].m = code_index + 10;
+        code[jpcIdx].m = code_index;
     } else if (tokens[current_token].token == whilesym) {
         current_token++;
-        int loopIdx = code_index + 10;
+        int loopIdx = code_index;
         condition();
         int jpcIdx = code_index;
         emit(8, 0, 0); // JPC
@@ -371,7 +371,7 @@ void statement() {
         current_token++;
         statement();
         emit(7, 0, loopIdx); // JMP
-        code[jpcIdx].m = code_index + 10;
+        code[jpcIdx].m = code_index;
     } else if (tokens[current_token].token == readsym) {
         current_token++;
         if (tokens[current_token].token != identsym) {
