@@ -404,27 +404,27 @@ void condition() {
         if (tokens[current_token].token == eqsym) {
             current_token++;
             expression();
-            emit(2, 0, 8); // EQL
+            emit(2, 0, 5); // EQL
         } else if (tokens[current_token].token == neqsym) {
             current_token++;
             expression();
-            emit(2, 0, 9); // NEQ
+            emit(2, 0, 6); // NEQ
         } else if (tokens[current_token].token == lessym) {
             current_token++;
             expression();
-            emit(2, 0, 10); // LSS
+            emit(2, 0, 7); // LSS
         } else if (tokens[current_token].token == leqsym) {
             current_token++;
             expression();
-            emit(2, 0, 11); // LEQ
+            emit(2, 0, 8); // LEQ
         } else if (tokens[current_token].token == gtrsym) {
             current_token++;
             expression();
-            emit(2, 0, 12); // GTR
+            emit(2, 0, 9); // GTR
         } else if (tokens[current_token].token == geqsym) {
             current_token++;
             expression();
-            emit(2, 0, 13); // GEQ
+            emit(2, 0, 10); // GEQ
         } else {
             print_error("condition must contain comparison operator");
         }
@@ -438,7 +438,7 @@ void expression() {
         current_token++;
         term();
         if (addop == minussym) {
-            emit(2, 0, 1); // NEG
+            emit(2, 0, 2); // NEG
         }
     } else {
         term();
@@ -448,9 +448,9 @@ void expression() {
         current_token++;
         term();
         if (addop == plussym) {
-            emit(2, 0, 2); // ADD
+            emit(2, 0, 1); // ADD
         } else {
-            emit(2, 0, 3); // SUB
+            emit(2, 0, 2); // SUB
         }
     }
 }
@@ -462,9 +462,9 @@ void term() {
         current_token++;
         factor();
         if (mulop == multsym) {
-            emit(2, 0, 4); // MUL
+            emit(2, 0, 3); // MUL
         } else {
-            emit(2, 0, 5); // DIV
+            emit(2, 0, 4); // DIV
         }
     }
 }
