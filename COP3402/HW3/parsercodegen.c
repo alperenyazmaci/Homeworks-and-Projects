@@ -75,7 +75,6 @@ int tokenCount = 0;
 int current_token = 0;
 symbol symbol_table[MAX_SYMBOL_TABLE_SIZE];
 int symbol_table_index = 0;
-FILE *errorFile; // Declare the error file pointer globally
 
 // Code generation variables
 typedef struct {
@@ -93,17 +92,18 @@ void addLexeme(const char *lexeme, token_type token, const char *errorMessage);
 void addToken(token_type token, const char *value);
 token_type getReservedWordToken(const char *word);
 token_type getSpecialSymbolToken(const char *symbol);
-void print_error(const char *message, const char *identifier);
-void program();
-void block();
-void const_declaration();
-int var_declaration();
-void statement();
-void condition();
-void expression();
-void term();
-void factor();
+void print_error(const char *message, const char *identifier, FILE *errorFile);
+void program(FILE *errorFile);
+void block(FILE *errorFile);
+void const_declaration(FILE *errorFile);
+int var_declaration(FILE *errorFile);
+void statement(FILE *errorFile);
+void condition(FILE *errorFile);
+void expression(FILE *errorFile);
+void term(FILE *errorFile);
+void factor(FILE *errorFile);
 int symbol_table_check(char *name);
+int symbol_table_check_declaration(char *name);
 void add_to_symbol_table(int kind, char *name, int val, int level, int addr);
 void print_symbol_table(FILE *outputFile);
 void emit(int op, int l, int m);
@@ -247,7 +247,7 @@ void lexicalAnalyzer(const char *source) {
     }
 }
 
-void print_error(const char *message, const char *identifier) {
+void print_error(const char *message, const char *identifier, FILE *errorFile) {
     if (identifier != NULL) {
         printf("Error: %s %s\n", message, identifier);
         fprintf(errorFile, "Error: %s %s\n", message, identifier);
@@ -260,40 +260,44 @@ void print_error(const char *message, const char *identifier) {
 
 // Recursive Descent Parser and Intermediate Code Generator
 
-void program() {
+void program(FILE *errorFile) {
     emit(7, 0, 3); // JMP to main block
-    block();
+    block(errorFile);
     if (tokens[current_token].token != periodsym) {
-        print_error("program must end with period", NULL);
+        print_error("program must end with period", NULL, errorFile);
     }
     emit(9, 0, 3); // HALT
 }
 
-void block() {
-    const_declaration();
-    int numVars = var_declaration();
+void block(FILE *errorFile) {
+    const_declaration(errorFile);
+    int numVars = var_declaration(errorFile);
     emit(6, 0, numVars + 3); // INC
-    statement();
+    statement(errorFile);
 }
 
-void const_declaration() {
+void const_declaration(FILE *errorFile) {
     if (tokens[current_token].token == constsym) {
         do {
             current_token++;
             if (tokens[current_token].token != identsym) {
-                print_error("const keyword must be followed by identifier", NULL);
+                print_error("const keyword must be followed by identifier", NULL, errorFile);
             }
             char const_name[12];
             strcpy(const_name, tokens[current_token].value);
 
+            if (symbol_table_check_declaration(const_name) != -1) {
+                print_error("symbol name has already been declared", const_name, errorFile);
+            }
+
             current_token++;
             if (tokens[current_token].token != eqsym) {
-                print_error("constants must be assigned with =", NULL);
+                print_error("constants must be assigned with =", NULL, errorFile);
             }
 
             current_token++;
             if (tokens[current_token].token != numbersym) {
-                print_error("constants must be assigned an integer value", NULL);
+                print_error("constants must be assigned an integer value", NULL, errorFile);
             }
             int const_value = atoi(tokens[current_token].value);
 
@@ -303,157 +307,160 @@ void const_declaration() {
         } while (tokens[current_token].token == commasym);
 
         if (tokens[current_token].token != semicolonsym) {
-            print_error("constant declarations must be followed by a semicolon", NULL);
+            print_error("constant declarations must be followed by a semicolon", NULL, errorFile);
         }
         current_token++;
     }
 }
 
-int var_declaration() {
+int var_declaration(FILE *errorFile) {
     int numVars = 0;
     if (tokens[current_token].token == varsym) {
         do {
             numVars++;
             current_token++;
             if (tokens[current_token].token != identsym) {
-                print_error("var keyword must be followed by identifier", NULL);
+                print_error("var keyword must be followed by identifier", NULL, errorFile);
+            }
+            if (symbol_table_check_declaration(tokens[current_token].value) != -1) {
+                print_error("symbol name has already been declared", tokens[current_token].value, errorFile);
             }
             add_to_symbol_table(2, tokens[current_token].value, 0, 0, numVars + 2);
             current_token++;
         } while (tokens[current_token].token == commasym);
 
         if (tokens[current_token].token != semicolonsym) {
-            print_error("variable declarations must be followed by a semicolon", NULL);
+            print_error("variable declarations must be followed by a semicolon", NULL, errorFile);
         }
         current_token++;
     }
     return numVars;
 }
 
-void statement() {
+void statement(FILE *errorFile) {
     if (tokens[current_token].token == identsym) {
         int symIdx = symbol_table_check(tokens[current_token].value);
         if (symIdx == -1) {
-            print_error("undeclared identifier", tokens[current_token].value);
+            print_error("undeclared identifier", tokens[current_token].value, errorFile);
         }
         if (symbol_table[symIdx].kind != 2) {
-            print_error("only variable values may be altered", NULL);
+            print_error("only variable values may be altered", NULL, errorFile);
         }
         current_token++;
         if (tokens[current_token].token != becomessym) {
-            print_error("assignment statements must use :=", NULL);
+            print_error("assignment statements must use :=", NULL, errorFile);
         }
         current_token++;
-        expression();
+        expression(errorFile);
         emit(4, 0, symbol_table[symIdx].addr); // STO
     } else if (tokens[current_token].token == beginsym) {
         do {
             current_token++;
-            statement();
+            statement(errorFile);
         } while (tokens[current_token].token == semicolonsym);
         if (tokens[current_token].token != endsym) {
-            print_error("begin must be followed by end", NULL);
+            print_error("begin must be followed by end", NULL, errorFile);
         }
         current_token++;
     } else if (tokens[current_token].token == ifsym) {
         current_token++;
-        condition();
+        condition(errorFile);
         int jpcIdx = code_index;
         emit(8, 0, 0); // JPC
         if (tokens[current_token].token != thensym) {
-            print_error("if must be followed by then", NULL);
+            print_error("if must be followed by then", NULL, errorFile);
         }
         current_token++;
-        statement();
+        statement(errorFile);
         code[jpcIdx].m = code_index;
     } else if (tokens[current_token].token == whilesym) {
         current_token++;
         int loopIdx = code_index;
-        condition();
+        condition(errorFile);
         int jpcIdx = code_index;
         emit(8, 0, 0); // JPC
         if (tokens[current_token].token != dosym) {
-            print_error("while must be followed by do", NULL);
+            print_error("while must be followed by do", NULL, errorFile);
         }
         current_token++;
-        statement();
+        statement(errorFile);
         emit(7, 0, loopIdx); // JMP
         code[jpcIdx].m = code_index;
     } else if (tokens[current_token].token == readsym) {
         current_token++;
         if (tokens[current_token].token != identsym) {
-            print_error("read keyword must be followed by identifier", NULL);
+            print_error("read keyword must be followed by identifier", NULL, errorFile);
         }
         int symIdx = symbol_table_check(tokens[current_token].value);
         if (symIdx == -1) {
-            print_error("undeclared identifier", tokens[current_token].value);
+            print_error("undeclared identifier", tokens[current_token].value, errorFile);
         }
         if (symbol_table[symIdx].kind != 2) {
-            print_error("only variable values may be altered", NULL);
+            print_error("only variable values may be altered", NULL, errorFile);
         }
         current_token++;
         emit(9, 0, 2); // READ
         emit(4, 0, symbol_table[symIdx].addr); // STO
     } else if (tokens[current_token].token == writesym) {
         current_token++;
-        expression();
+        expression(errorFile);
         emit(9, 0, 1); // WRITE
     }
 }
 
-void condition() {
+void condition(FILE *errorFile) {
     if (tokens[current_token].token == oddsym) {
         current_token++;
-        expression();
+        expression(errorFile);
         emit(2, 0, 11); // ODD
     } else {
-        expression();
+        expression(errorFile);
         if (tokens[current_token].token == eqsym) {
             current_token++;
-            expression();
+            expression(errorFile);
             emit(2, 0, 5); // EQL
         } else if (tokens[current_token].token == neqsym) {
             current_token++;
-            expression();
+            expression(errorFile);
             emit(2, 0, 6); // NEQ
         } else if (tokens[current_token].token == lessym) {
             current_token++;
-            expression();
+            expression(errorFile);
             emit(2, 0, 7); // LSS
         } else if (tokens[current_token].token == leqsym) {
             current_token++;
-            expression();
+            expression(errorFile);
             emit(2, 0, 8); // LEQ
         } else if (tokens[current_token].token == gtrsym) {
             current_token++;
-            expression();
+            expression(errorFile);
             emit(2, 0, 9); // GTR
         } else if (tokens[current_token].token == geqsym) {
             current_token++;
-            expression();
+            expression(errorFile);
             emit(2, 0, 10); // GEQ
         } else {
-            print_error("condition must contain comparison operator", NULL);
+            print_error("condition must contain comparison operator", NULL, errorFile);
         }
     }
 }
 
-void expression() {
+void expression(FILE *errorFile) {
     int addop;
     if (tokens[current_token].token == plussym || tokens[current_token].token == minussym) {
         addop = tokens[current_token].token;
         current_token++;
-        term();
+        term(errorFile);
         if (addop == minussym) {
             emit(2, 0, 2); // SUB
         }
     } else {
-        term();
+        term(errorFile);
     }
     while (tokens[current_token].token == plussym || tokens[current_token].token == minussym) {
         addop = tokens[current_token].token;
         current_token++;
-        term();
+        term(errorFile);
         if (addop == plussym) {
             emit(2, 0, 1); // ADD
         } else {
@@ -462,12 +469,12 @@ void expression() {
     }
 }
 
-void term() {
-    factor();
+void term(FILE *errorFile) {
+    factor(errorFile);
     while (tokens[current_token].token == multsym || tokens[current_token].token == slashsym) {
         int mulop = tokens[current_token].token;
         current_token++;
-        factor();
+        factor(errorFile);
         if (mulop == multsym) {
             emit(2, 0, 3); // MUL
         } else {
@@ -476,11 +483,11 @@ void term() {
     }
 }
 
-void factor() {
+void factor(FILE *errorFile) {
     if (tokens[current_token].token == identsym) {
         int symIdx = symbol_table_check(tokens[current_token].value);
         if (symIdx == -1) {
-            print_error("undeclared identifier", tokens[current_token].value);
+            print_error("undeclared identifier", tokens[current_token].value, errorFile);
         }
         current_token++;
         if (symbol_table[symIdx].kind == 1) { // const
@@ -493,19 +500,28 @@ void factor() {
         current_token++;
     } else if (tokens[current_token].token == lparentsym) {
         current_token++;
-        expression();
+        expression(errorFile);
         if (tokens[current_token].token != rparentsym) {
-            print_error("right parenthesis must follow left parenthesis", NULL);
+            print_error("right parenthesis must follow left parenthesis", NULL, errorFile);
         }
         current_token++;
     } else {
-        print_error("arithmetic equations must contain operands, parentheses, numbers, or symbols", NULL);
+        print_error("arithmetic equations must contain operands, parentheses, numbers, or symbols", NULL, errorFile);
     }
 }
 
 int symbol_table_check(char *name) {
     for (int i = 0; i < symbol_table_index; i++) {
         if (strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].mark == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int symbol_table_check_declaration(char *name) {
+    for (int i = 0; i < symbol_table_index; i++) {
+        if (strcmp(symbol_table[i].name, name) == 0) {
             return i;
         }
     }
@@ -530,10 +546,10 @@ void mark_symbols() {
 
 void print_symbol_table(FILE *outputFile) {
     printf("Symbol Table:\n");
-    fprintf(outputFile, "Symbol Table:\n");
     printf("Kind | Name       | Value | Level | Address | Mark\n");
-    fprintf(outputFile, "Kind | Name       | Value | Level | Address | Mark\n");
     printf("---------------------------------------------------\n");
+    fprintf(outputFile, "Symbol Table:\n");
+    fprintf(outputFile, "Kind | Name       | Value | Level | Address | Mark\n");
     fprintf(outputFile, "---------------------------------------------------\n");
     for (int i = 0; i < symbol_table_index; i++) {
         printf("   %d | %10s | %5d | %5d | %5d | %5d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val,
@@ -552,8 +568,8 @@ void emit(int op, int l, int m) {
 
 void print_code(FILE *outputFile) {
     printf("Generated Code:\n");
-    fprintf(outputFile, "Generated Code:\n");
     printf("Line    OP    L    M\n");
+    fprintf(outputFile, "Generated Code:\n");
     fprintf(outputFile, "Line    OP    L    M\n");
     for (int i = 0; i < code_index; i++) {
         char op[4];
@@ -602,55 +618,68 @@ int main(int argc, char *argv[]) {
     }
 
     // Output the source program
+    // printf("Source Program:\n%s\n\n", sourceProgram);
     fprintf(outputFile, "Source Program:\n%s\n\n", sourceProgram);
 
     // Output the lexeme table
+    // printf("Lexeme Table:\n");
     fprintf(outputFile, "Lexeme Table:\n");
+    // printf("\nlexeme token type\n");
     fprintf(outputFile, "\nlexeme token type\n");
     for (int i = 0; i < lexemeCount; i++) {
         if (lexemes[i].token == error_token) {
+            // printf("%-15s %s\n", lexemes[i].lexeme, lexemes[i].errorMessage);
             fprintf(outputFile, "%-15s %s\n", lexemes[i].lexeme, lexemes[i].errorMessage);
         } else {
+            // printf("%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
             fprintf(outputFile, "%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
         }
     }
 
     // Output the token list
+    // printf("\nToken List:\n");
     fprintf(outputFile, "\nToken List:\n");
     for (int i = 0; i < tokenCount; i++) {
+        // printf("%d", tokens[i].token);
         fprintf(outputFile, "%d", tokens[i].token);
         if (tokens[i].token == identsym || tokens[i].token == numbersym) {
+            // printf(" %s", tokens[i].value);
             fprintf(outputFile, " %s", tokens[i].value);
         }
         if (i < tokenCount - 1) {
+            // printf(" ");
             fprintf(outputFile, " ");
         }
     }
+    // printf("\n");
     fprintf(outputFile, "\n");
 
     // Close the output file
     fclose(outputFile);
 
-    errorFile = fopen("output1.txt", "w");
-    if (!errorFile) {
-        perror("Error opening error output file");
+    FILE *outputFile2 = fopen("output1.txt", "w");
+    if (!outputFile2) {
+        perror("Error opening output file");
         return 1;
     }
 
     // Parse the program
-    program();
+    program(outputFile2);
 
     // Mark all symbols as available
     mark_symbols();
 
     // Output the generated code
-    print_code(errorFile);
+    print_code(outputFile2);
     printf("\n");
 
     // Output the symbol table
-    print_symbol_table(errorFile);
+    print_symbol_table(outputFile2);
 
-    fclose(errorFile);
+    printf("Program parsed successfully.\n");
+
+    // Close the output file
+    fclose(outputFile2);
 
     return 0;
 }

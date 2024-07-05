@@ -1,0 +1,1 @@
+Error: const keyword must be followed by identifier
