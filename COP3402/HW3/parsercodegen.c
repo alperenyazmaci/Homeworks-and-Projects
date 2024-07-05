@@ -254,7 +254,7 @@ void print_error(const char *message) {
 // Recursive Descent Parser and Intermediate Code Generator
 
 void program() {
-    emit(7, 0, 3); // JMP to main block
+    emit(7, 0, 13); // JMP to main block
     block();
     if (tokens[current_token].token != periodsym) {
         print_error("program must end with period");
@@ -358,10 +358,10 @@ void statement() {
         }
         current_token++;
         statement();
-        code[jpcIdx].m = code_index;
+        code[jpcIdx].m = code_index + 10;
     } else if (tokens[current_token].token == whilesym) {
         current_token++;
-        int loopIdx = code_index;
+        int loopIdx = code_index + 10;
         condition();
         int jpcIdx = code_index;
         emit(8, 0, 0); // JPC
@@ -371,7 +371,7 @@ void statement() {
         current_token++;
         statement();
         emit(7, 0, loopIdx); // JMP
-        code[jpcIdx].m = code_index;
+        code[jpcIdx].m = code_index + 10;
     } else if (tokens[current_token].token == readsym) {
         current_token++;
         if (tokens[current_token].token != identsym) {
@@ -398,7 +398,7 @@ void condition() {
     if (tokens[current_token].token == oddsym) {
         current_token++;
         expression();
-        emit(2, 0, 6); // ODD
+        emit(2, 0, 11); // ODD
     } else {
         expression();
         if (tokens[current_token].token == eqsym) {
@@ -432,18 +432,24 @@ void condition() {
 }
 
 void expression() {
+    int addop;
     if (tokens[current_token].token == plussym || tokens[current_token].token == minussym) {
+        addop = tokens[current_token].token;
         current_token++;
+        term();
+        if (addop == minussym) {
+            emit(2, 0, 1); // NEG
+        }
+    } else {
+        term();
     }
-    term();
     while (tokens[current_token].token == plussym || tokens[current_token].token == minussym) {
-        if (tokens[current_token].token == plussym) {
-            current_token++;
-            term();
+        addop = tokens[current_token].token;
+        current_token++;
+        term();
+        if (addop == plussym) {
             emit(2, 0, 2); // ADD
         } else {
-            current_token++;
-            term();
             emit(2, 0, 3); // SUB
         }
     }
@@ -452,13 +458,12 @@ void expression() {
 void term() {
     factor();
     while (tokens[current_token].token == multsym || tokens[current_token].token == slashsym) {
-        if (tokens[current_token].token == multsym) {
-            current_token++;
-            factor();
+        int mulop = tokens[current_token].token;
+        current_token++;
+        factor();
+        if (mulop == multsym) {
             emit(2, 0, 4); // MUL
         } else {
-            current_token++;
-            factor();
             emit(2, 0, 5); // DIV
         }
     }
