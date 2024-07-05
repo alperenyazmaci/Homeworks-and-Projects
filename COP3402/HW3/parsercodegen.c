@@ -23,8 +23,8 @@
 
 // Enum alias and definition
 typedef enum {
-    nulsym = 1, identsym, numbersym, plussym, minussym,
-    multsym, slashsym, oddsym, eqsym, neqsym, lessym, leqsym,
+    oddsym = 1, identsym, numbersym, plussym, minussym,
+    multsym, slashsym, nulsym, eqsym, neqsym, lessym, leqsym,
     gtrsym, geqsym, lparentsym, rparentsym, commasym, semicolonsym,
     periodsym, becomessym, beginsym, endsym, ifsym, thensym,
     whilesym, dosym, callsym, constsym, varsym, procsym, writesym,
@@ -54,11 +54,11 @@ typedef struct {
 
 // Initialize reserved and special words and tokens as constants
 const char *reservedWords[] = {
-    "const", "var", "procedure", "call", "begin", "end", "if", "fi", "then", 
-    "else", "while", "do", "read", "write"
+    "const", "var", "begin", "end", "if", "fi", "then", 
+    "while", "do", "read", "write"
 };
 const token_type reservedTokens[] = {
-    constsym, varsym, procsym, callsym, beginsym, endsym, ifsym, oddsym, thensym, elsesym, whilesym, dosym, readsym, writesym
+    constsym, varsym, beginsym, endsym, ifsym, oddsym, thensym, whilesym, dosym, readsym, writesym
 };
 const char *specialSymbols[] = {
     "+", "-", "*", "/", "(", ")", "=", ",", ".", "<", ">", ";", ":=", "<>"
@@ -438,7 +438,7 @@ void expression() {
         current_token++;
         term();
         if (addop == minussym) {
-            emit(2, 0, 2); // NEG
+            emit(2, 0, 2); // SUB
         }
     } else {
         term();
