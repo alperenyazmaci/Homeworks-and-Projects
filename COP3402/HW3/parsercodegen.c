@@ -92,7 +92,7 @@ void addLexeme(const char *lexeme, token_type token, const char *errorMessage);
 void addToken(token_type token, const char *value);
 token_type getReservedWordToken(const char *word);
 token_type getSpecialSymbolToken(const char *symbol);
-void print_error(const char *message);
+void print_error(const char *message, const char *identifier);
 void program();
 void block();
 void const_declaration();
@@ -246,8 +246,12 @@ void lexicalAnalyzer(const char *source) {
     }
 }
 
-void print_error(const char *message) {
-    printf("Error: %s\n", message);
+void print_error(const char *message, const char *identifier) {
+    if (identifier != NULL) {
+        printf("Error: %s %s\n", message, identifier);
+    } else {
+        printf("Error: %s\n", message);
+    }
     exit(1);
 }
 
@@ -257,7 +261,7 @@ void program() {
     emit(7, 0, 3); // JMP to main block
     block();
     if (tokens[current_token].token != periodsym) {
-        print_error("program must end with period");
+        print_error("program must end with period", NULL);
     }
     emit(9, 0, 3); // HALT
 }
@@ -274,19 +278,19 @@ void const_declaration() {
         do {
             current_token++;
             if (tokens[current_token].token != identsym) {
-                print_error("const keyword must be followed by identifier");
+                print_error("const keyword must be followed by identifier", NULL);
             }
             char const_name[12];
             strcpy(const_name, tokens[current_token].value);
 
             current_token++;
             if (tokens[current_token].token != eqsym) {
-                print_error("constants must be assigned with =");
+                print_error("constants must be assigned with =", NULL);
             }
 
             current_token++;
             if (tokens[current_token].token != numbersym) {
-                print_error("constants must be assigned an integer value");
+                print_error("constants must be assigned an integer value", NULL);
             }
             int const_value = atoi(tokens[current_token].value);
 
@@ -296,7 +300,7 @@ void const_declaration() {
         } while (tokens[current_token].token == commasym);
 
         if (tokens[current_token].token != semicolonsym) {
-            print_error("constant declarations must be followed by a semicolon");
+            print_error("constant declarations must be followed by a semicolon", NULL);
         }
         current_token++;
     }
@@ -309,14 +313,14 @@ int var_declaration() {
             numVars++;
             current_token++;
             if (tokens[current_token].token != identsym) {
-                print_error("var keyword must be followed by identifier");
+                print_error("var keyword must be followed by identifier", NULL);
             }
             add_to_symbol_table(2, tokens[current_token].value, 0, 0, numVars + 2);
             current_token++;
         } while (tokens[current_token].token == commasym);
 
         if (tokens[current_token].token != semicolonsym) {
-            print_error("variable declarations must be followed by a semicolon");
+            print_error("variable declarations must be followed by a semicolon", NULL);
         }
         current_token++;
     }
@@ -327,14 +331,14 @@ void statement() {
     if (tokens[current_token].token == identsym) {
         int symIdx = symbol_table_check(tokens[current_token].value);
         if (symIdx == -1) {
-            print_error("undeclared identifier");
+            print_error("undeclared identifier", tokens[current_token].value);
         }
         if (symbol_table[symIdx].kind != 2) {
-            print_error("only variable values may be altered");
+            print_error("only variable values may be altered", NULL);
         }
         current_token++;
         if (tokens[current_token].token != becomessym) {
-            print_error("assignment statements must use :=");
+            print_error("assignment statements must use :=", NULL);
         }
         current_token++;
         expression();
@@ -345,7 +349,7 @@ void statement() {
             statement();
         } while (tokens[current_token].token == semicolonsym);
         if (tokens[current_token].token != endsym) {
-            print_error("begin must be followed by end");
+            print_error("begin must be followed by end", NULL);
         }
         current_token++;
     } else if (tokens[current_token].token == ifsym) {
@@ -354,7 +358,7 @@ void statement() {
         int jpcIdx = code_index;
         emit(8, 0, 0); // JPC
         if (tokens[current_token].token != thensym) {
-            print_error("if must be followed by then");
+            print_error("if must be followed by then", NULL);
         }
         current_token++;
         statement();
@@ -366,7 +370,7 @@ void statement() {
         int jpcIdx = code_index;
         emit(8, 0, 0); // JPC
         if (tokens[current_token].token != dosym) {
-            print_error("while must be followed by do");
+            print_error("while must be followed by do", NULL);
         }
         current_token++;
         statement();
@@ -375,14 +379,14 @@ void statement() {
     } else if (tokens[current_token].token == readsym) {
         current_token++;
         if (tokens[current_token].token != identsym) {
-            print_error("read keyword must be followed by identifier");
+            print_error("read keyword must be followed by identifier", NULL);
         }
         int symIdx = symbol_table_check(tokens[current_token].value);
         if (symIdx == -1) {
-            print_error("undeclared identifier");
+            print_error("undeclared identifier", tokens[current_token].value);
         }
         if (symbol_table[symIdx].kind != 2) {
-            print_error("only variable values may be altered");
+            print_error("only variable values may be altered", NULL);
         }
         current_token++;
         emit(9, 0, 2); // READ
@@ -393,6 +397,7 @@ void statement() {
         emit(9, 0, 1); // WRITE
     }
 }
+
 
 void condition() {
     if (tokens[current_token].token == oddsym) {
@@ -426,7 +431,7 @@ void condition() {
             expression();
             emit(2, 0, 10); // GEQ
         } else {
-            print_error("condition must contain comparison operator");
+            print_error("condition must contain comparison operator", NULL);
         }
     }
 }
@@ -473,7 +478,7 @@ void factor() {
     if (tokens[current_token].token == identsym) {
         int symIdx = symbol_table_check(tokens[current_token].value);
         if (symIdx == -1) {
-            print_error("undeclared identifier");
+            print_error("undeclared identifier", tokens[current_token].value);
         }
         current_token++;
         if (symbol_table[symIdx].kind == 1) { // const
@@ -488,11 +493,11 @@ void factor() {
         current_token++;
         expression();
         if (tokens[current_token].token != rparentsym) {
-            print_error("right parenthesis must follow left parenthesis");
+            print_error("right parenthesis must follow left parenthesis", NULL);
         }
         current_token++;
     } else {
-        print_error("arithmetic equations must contain operands, parentheses, numbers, or symbols");
+        print_error("arithmetic equations must contain operands, parentheses, numbers, or symbols", NULL);
     }
 }
 
