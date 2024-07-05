@@ -86,6 +86,9 @@ typedef struct {
 instruction code[MAX_CODE_LENGTH];
 int code_index = 0;
 
+// File pointer for error output
+FILE *parserOutputFile;
+
 // Function prototypes
 void lexicalAnalyzer(const char *source);
 void addLexeme(const char *lexeme, token_type token, const char *errorMessage);
@@ -104,9 +107,9 @@ void term();
 void factor();
 int symbol_table_check(char *name);
 void add_to_symbol_table(int kind, char *name, int val, int level, int addr);
-void print_symbol_table();
+void print_symbol_table(FILE *outputFile);
 void emit(int op, int l, int m);
-void print_code();
+void print_code(FILE *outputFile);
 void mark_symbols();
 
 // Function to add a lexeme to the Lexeme array
@@ -248,10 +251,13 @@ void lexicalAnalyzer(const char *source) {
 
 void print_error(const char *message, const char *identifier) {
     if (identifier != NULL) {
+        fprintf(parserOutputFile, "Error: %s %s\n", message, identifier);
         printf("Error: %s %s\n", message, identifier);
     } else {
+        fprintf(parserOutputFile, "Error: %s\n", message);
         printf("Error: %s\n", message);
     }
+    fclose(parserOutputFile); // Ensure to close the file before exiting
     exit(1);
 }
 
@@ -525,12 +531,12 @@ void mark_symbols() {
     }
 }
 
-void print_symbol_table() {
-    printf("Symbol Table:\n");
-    printf("Kind | Name       | Value | Level | Address | Mark\n");
-    printf("---------------------------------------------------\n");
+void print_symbol_table(FILE *outputFile) {
+    fprintf(outputFile, "Symbol Table:\n");
+    fprintf(outputFile, "Kind | Name       | Value | Level | Address | Mark\n");
+    fprintf(outputFile, "---------------------------------------------------\n");
     for (int i = 0; i < symbol_table_index; i++) {
-        printf("   %d | %10s | %5d | %5d | %5d | %5d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val,
+        fprintf(outputFile, "   %d | %10s | %5d | %5d | %5d | %5d\n", symbol_table[i].kind, symbol_table[i].name, symbol_table[i].val,
                symbol_table[i].level, symbol_table[i].addr, symbol_table[i].mark);
     }
 }
@@ -542,9 +548,9 @@ void emit(int op, int l, int m) {
     code_index++;
 }
 
-void print_code() {
-    printf("Generated Code:\n");
-    printf("Line    OP    L    M\n");
+void print_code(FILE *outputFile) {
+    fprintf(outputFile, "Generated Code:\n");
+    fprintf(outputFile, "Line    OP    L    M\n");
     for (int i = 0; i < code_index; i++) {
         char op[4];
         if(code[i].op == 1) strcpy(op, "LIT");
@@ -556,7 +562,7 @@ void print_code() {
         else if(code[i].op == 7) strcpy(op, "JMP");
         else if(code[i].op == 8) strcpy(op, "JPC");
         else if(code[i].op == 9) strcpy(op, "SYS");
-        printf("%3d %6s %4d %4d\n", i, op, code[i].l, code[i].m);
+        fprintf(outputFile, "%3d %6s %4d %4d\n", i, op, code[i].l, code[i].m);
     }
 }
 
@@ -630,6 +636,13 @@ int main(int argc, char *argv[]) {
     // Close the output file
     fclose(outputFile);
 
+    // Open output1.txt for writing
+    parserOutputFile = fopen("output1.txt", "w");
+    if (!parserOutputFile) {
+        perror("Error opening output file");
+        return 1;
+    }
+
     // Parse the program
     program();
 
@@ -637,13 +650,15 @@ int main(int argc, char *argv[]) {
     mark_symbols();
 
     // Output the generated code
-    print_code();
+    print_code(parserOutputFile);
     printf("\n");
 
     // Output the symbol table
-    print_symbol_table();
+    print_symbol_table(parserOutputFile);
 
     printf("Program parsed successfully.\n");
+
+    fclose(parserOutputFile);
 
     return 0;
 }
