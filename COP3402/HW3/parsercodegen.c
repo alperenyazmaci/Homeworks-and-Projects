@@ -611,7 +611,7 @@ int main(int argc, char *argv[]) {
     lexicalAnalyzer(sourceProgram);
 
     // Open output.txt for writing
-    FILE *outputFile = fopen("output.txt", "w");
+    FILE *outputFile = fopen("lexOutput.txt", "w");
     if (!outputFile) {
         perror("Error opening output file");
         return 1;
@@ -657,7 +657,7 @@ int main(int argc, char *argv[]) {
     // Close the output file
     fclose(outputFile);
 
-    FILE *outputFile2 = fopen("output1.txt", "w");
+    FILE *outputFile2 = fopen("output.txt", "w");
     if (!outputFile2) {
         perror("Error opening output file");
         return 1;

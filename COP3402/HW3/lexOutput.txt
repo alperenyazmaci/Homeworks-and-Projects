@@ -1,25 +1,32 @@
 Source Program:
-var x, x;
+const  := 5;
+var x, y;
 begin
-    x := 5;
+    x := y * 2;
 end.
 
 
 Lexeme Table:
 
 lexeme token type
+const           28   
+:=              20   
+5               3    
+;               18   
 var             29   
 x               2    
 ,               17   
-x               2    
+y               2    
 ;               18   
 begin           21   
 x               2    
 :=              20   
-5               3    
+y               2    
+*               6    
+2               3    
 ;               18   
 end             22   
 .               19   
 
 Token List:
-29 2 x 17 2 x 18 21 2 x 20 3 5 18 22 19
+28 20 3 5 18 29 2 x 17 2 y 18 21 2 x 20 2 y 6 3 2 18 22 19
