@@ -1,18 +1,16 @@
+//  hw4compiler.c
+//  Homework4
 //
-// parsercodegen.c
-// Homework3
+//  Created by Alperen Yazmaci
 //
-// Created by Alperen Yazmaci on 06.01.2024
-//
-//AUTHOR: Alperen Yazmaci
+// AUTHOR: Alperen Yazmaci
 
-//Header Files
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
-//Define the max values
+// Define the max values
 #define MAX_LEXEMES 1000
 #define MAX_TOKENS 1000
 #define MAX_SOURCE_SIZE 10000
@@ -21,7 +19,7 @@
 #define MAX_SYMBOL_TABLE_SIZE 500
 #define MAX_CODE_LENGTH 500
 
-//Enum alias and definition
+// Enum alias and definition
 typedef enum {
     oddsym = 1, identsym, numbersym, plussym, minussym,
     multsym, slashsym, nulsym, eqsym, neqsym, lessym, leqsym,
@@ -31,7 +29,7 @@ typedef enum {
     readsym, elsesym, error_token
 } token_type;
 
-//Struct aliases and definitions
+// Struct aliases and definitions
 typedef struct {
     char lexeme[12];
     token_type token;
@@ -41,22 +39,24 @@ typedef struct {
     token_type token;
     char value[12];
 } Token;
+
+// Symbol table entry
 typedef struct {
-    int kind; 
-    char name[10]; 
-    int val; 
-    int level; //L
-    int addr; //M
-    int mark; 
+    int kind; // const = 1, var = 2, proc = 3
+    char name[10]; // name up to 11 chars
+    int val; // number (ASCII value)
+    int level; // L level
+    int addr; // M address
+    int mark; // to indicate unavailable or deleted
 } symbol;
 
-//Initialize reserved and special words and tokens as constants
+// Initialize reserved and special words and tokens as constants
 const char *reservedWords[] = {
-    "const", "var", "begin", "end", "if", "fi", "then", 
-    "while", "do", "read", "write"
+    "const", "var", "procedure", "call", "begin", "end", "if", "fi", "then", 
+    "else", "while", "do", "read", "write"
 };
 const token_type reservedTokens[] = {
-    constsym, varsym, beginsym, endsym, ifsym, oddsym, thensym, whilesym, dosym, readsym, writesym
+    constsym, varsym, procsym, callsym, beginsym, endsym, ifsym, oddsym, thensym, elsesym, whilesym, dosym, readsym, writesym
 };
 const char *specialSymbols[] = {
     "+", "-", "*", "/", "(", ")", "=", ",", ".", "<", ">", ";", ":=", "<>"
@@ -64,13 +64,8 @@ const char *specialSymbols[] = {
 const token_type specialTokens[] = {
     plussym, minussym, multsym, slashsym, lparentsym, rparentsym, eqsym, commasym, periodsym, lessym, gtrsym, semicolonsym, becomessym
 };
-typedef struct {
-    int op;
-    int l;
-    int m;
-} instruction;
 
-//Initialize the global variables
+// Initialize the global variables
 Lexeme lexemes[MAX_LEXEMES];
 Token tokens[MAX_TOKENS];
 int lexemeCount = 0;
@@ -78,10 +73,18 @@ int tokenCount = 0;
 int current_token = 0;
 symbol symbol_table[MAX_SYMBOL_TABLE_SIZE];
 int symbol_table_index = 0;
+
+// Code generation variables
+typedef struct {
+    int op;
+    int l;
+    int m;
+} instruction;
+
 instruction code[MAX_CODE_LENGTH];
 int code_index = 0;
 
-//Function prototypes
+// Function prototypes
 void lexicalAnalyzer(const char *source);
 void addLexeme(const char *lexeme, token_type token, const char *errorMessage);
 void addToken(token_type token, const char *value);
@@ -105,7 +108,7 @@ void emit(int op, int l, int m);
 void print_code(FILE *outputFile);
 void mark_symbols();
 
-//Function to add a lexeme to the Lexeme array
+// Function to add a lexeme to the Lexeme array
 void addLexeme(const char *lexeme, token_type token, const char *errorMessage) {
     strncpy(lexemes[lexemeCount].lexeme, lexeme, sizeof(lexemes[lexemeCount].lexeme) - 1);
     lexemes[lexemeCount].lexeme[sizeof(lexemes[lexemeCount].lexeme) - 1] = '\0';
@@ -119,7 +122,7 @@ void addLexeme(const char *lexeme, token_type token, const char *errorMessage) {
     lexemeCount++;
 }
 
-//Function to add a token to the Token array
+// Function to add a token to the Token array
 void addToken(token_type token, const char *value) {
     tokens[tokenCount].token = token;
     strncpy(tokens[tokenCount].value, value, sizeof(tokens[tokenCount].value) - 1);
@@ -127,7 +130,7 @@ void addToken(token_type token, const char *value) {
     tokenCount++;
 }
 
-//Function to check if a string is a reserved word
+// Function to check if a string is a reserved word
 token_type getReservedWordToken(const char *word) {
     for (int i = 0; i < sizeof(reservedWords) / sizeof(reservedWords[0]); i++) {
         if (strcmp(word, reservedWords[i]) == 0) {
@@ -137,7 +140,7 @@ token_type getReservedWordToken(const char *word) {
     return identsym;
 }
 
-//Function to check if a string is a special symbol
+// Function to check if a string is a special symbol
 token_type getSpecialSymbolToken(const char *symbol) {
     for (int i = 0; i < sizeof(specialSymbols) / sizeof(specialSymbols[0]); i++) {
         if (strcmp(symbol, specialSymbols[i]) == 0) {
@@ -147,7 +150,7 @@ token_type getSpecialSymbolToken(const char *symbol) {
     return nulsym;
 }
 
-//The function that goes over source and lexical analyzes the source string
+// The function that goes over source and lexical analyzes the source string
 void lexicalAnalyzer(const char *source) {
     int i = 0;
     while (source[i] != '\0') {
@@ -156,7 +159,7 @@ void lexicalAnalyzer(const char *source) {
             continue;
         }
 
-        //Handle comments
+        // Handle comments
         if (source[i] == '/' && source[i + 1] == '*') {
             i += 2;
             int comment_closed = 0;
@@ -175,17 +178,17 @@ void lexicalAnalyzer(const char *source) {
             continue;
         }
 
-        //Handle identifiers and reserved words
+        // Handle identifiers and reserved words
         if (isalpha(source[i])) {
             char buffer[12] = {0};
             int j = 0;
             while (isalnum(source[i]) && j < MAX_IDENTIFIER_LENGTH) {
                 buffer[j++] = source[i++];
             }
-            buffer[j] = '\0'; //Ensure null-terminated
+            buffer[j] = '\0'; // Ensure null-terminated
             if (isalnum(source[i])) {
                 addLexeme(buffer, error_token, "Error: Identifier too long");
-                while (isalnum(source[i])) i++; //Skip the rest of the identifier
+                while (isalnum(source[i])) i++; // Skip the rest of the identifier
                 continue;
             }
             token_type token = getReservedWordToken(buffer);
@@ -194,7 +197,7 @@ void lexicalAnalyzer(const char *source) {
             continue;
         }
 
-        //Handle numbers
+        // Handle numbers
         if (isdigit(source[i])) {
             char buffer[6] = {0};
             int j = 0;
@@ -212,7 +215,7 @@ void lexicalAnalyzer(const char *source) {
             continue;
         }
 
-        //Handle complex token sequences and special symbols
+        // Handle complex token sequences and special symbols
         char buffer[3] = {0};
         buffer[0] = source[i++];
         if ((buffer[0] == ':' && source[i] == '=') || 
@@ -223,7 +226,7 @@ void lexicalAnalyzer(const char *source) {
         }
         token_type token = getSpecialSymbolToken(buffer);
         if (token == nulsym) {
-            //Handle specific cases for two-character symbols
+            // Handle specific cases for two-character symbols
             if (buffer[0] == '<' && buffer[1] == '>') {
                 token = neqsym;
             } else if (buffer[0] == '<' && buffer[1] == '=') {
@@ -242,7 +245,6 @@ void lexicalAnalyzer(const char *source) {
     }
 }
 
-//Function to print an error both into console and the errorFile
 void print_error(const char *message, const char *identifier, FILE *errorFile) {
     if (identifier != NULL) {
         printf("Error: %s %s\n", message, identifier);
@@ -254,27 +256,24 @@ void print_error(const char *message, const char *identifier, FILE *errorFile) {
     exit(1);
 }
 
-//--------------------------- Functions for HW 3 start here ---------------------------
+// Recursive Descent Parser and Intermediate Code Generator
 
-//Function that parses the and generates a code from the source
 void program(FILE *errorFile) {
-    emit(7, 0, 3); //JMP to main block
+    emit(7, 0, 3); // JMP to main block
     block(errorFile);
     if (tokens[current_token].token != periodsym) {
         print_error("program must end with period", NULL, errorFile);
     }
-    emit(9, 0, 3); //HALT
+    emit(9, 0, 3); // HALT
 }
 
-//Function that parses a block of code
 void block(FILE *errorFile) {
     const_declaration(errorFile);
     int numVars = var_declaration(errorFile);
-    emit(6, 0, numVars + 3); //INC
+    emit(6, 0, numVars + 3); // INC
     statement(errorFile);
 }
 
-//Function for when a constant declaration is encountered
 void const_declaration(FILE *errorFile) {
     if (tokens[current_token].token == constsym) {
         do {
@@ -312,7 +311,6 @@ void const_declaration(FILE *errorFile) {
     }
 }
 
-//Function for when a var declaration is encountered
 int var_declaration(FILE *errorFile) {
     int numVars = 0;
     if (tokens[current_token].token == varsym) {
@@ -337,7 +335,6 @@ int var_declaration(FILE *errorFile) {
     return numVars;
 }
 
-//Function for when a statement is encountered
 void statement(FILE *errorFile) {
     if (tokens[current_token].token == identsym) {
         int symIdx = symbol_table_check(tokens[current_token].value);
@@ -353,7 +350,7 @@ void statement(FILE *errorFile) {
         }
         current_token++;
         expression(errorFile);
-        emit(4, 0, symbol_table[symIdx].addr); //STO
+        emit(4, 0, symbol_table[symIdx].addr); // STO
     } else if (tokens[current_token].token == beginsym) {
         do {
             current_token++;
@@ -367,25 +364,33 @@ void statement(FILE *errorFile) {
         current_token++;
         condition(errorFile);
         int jpcIdx = code_index;
-        emit(8, 0, 0); //JPC
+        emit(8, 0, 0); // JPC
         if (tokens[current_token].token != thensym) {
             print_error("if must be followed by then", NULL, errorFile);
         }
         current_token++;
         statement(errorFile);
         code[jpcIdx].m = code_index;
+        if (tokens[current_token].token == elsesym) {
+            int jmpIdx = code_index;
+            emit(7, 0, 0); // JMP
+            code[jpcIdx].m = code_index;
+            current_token++;
+            statement(errorFile);
+            code[jmpIdx].m = code_index;
+        }
     } else if (tokens[current_token].token == whilesym) {
         current_token++;
         int loopIdx = code_index;
         condition(errorFile);
         int jpcIdx = code_index;
-        emit(8, 0, 0); //JPC
+        emit(8, 0, 0); // JPC
         if (tokens[current_token].token != dosym) {
             print_error("while must be followed by do", NULL, errorFile);
         }
         current_token++;
         statement(errorFile);
-        emit(7, 0, loopIdx); //JMP
+        emit(7, 0, loopIdx); // JMP
         code[jpcIdx].m = code_index;
     } else if (tokens[current_token].token == readsym) {
         current_token++;
@@ -400,54 +405,52 @@ void statement(FILE *errorFile) {
             print_error("only variable values may be altered", NULL, errorFile);
         }
         current_token++;
-        emit(9, 0, 2); //READ
-        emit(4, 0, symbol_table[symIdx].addr); //STO
+        emit(9, 0, 2); // READ
+        emit(4, 0, symbol_table[symIdx].addr); // STO
     } else if (tokens[current_token].token == writesym) {
         current_token++;
         expression(errorFile);
-        emit(9, 0, 1); //WRITE
+        emit(9, 0, 1); // WRITE
     }
 }
 
-//Function for when a condition is encountered
 void condition(FILE *errorFile) {
     if (tokens[current_token].token == oddsym) {
         current_token++;
         expression(errorFile);
-        emit(2, 0, 11); //ODD
+        emit(2, 0, 11); // ODD
     } else {
         expression(errorFile);
         if (tokens[current_token].token == eqsym) {
             current_token++;
             expression(errorFile);
-            emit(2, 0, 5); //EQL
+            emit(2, 0, 5); // EQL
         } else if (tokens[current_token].token == neqsym) {
             current_token++;
             expression(errorFile);
-            emit(2, 0, 6); //NEQ
+            emit(2, 0, 6); // NEQ
         } else if (tokens[current_token].token == lessym) {
             current_token++;
             expression(errorFile);
-            emit(2, 0, 7); //LSS
+            emit(2, 0, 7); // LSS
         } else if (tokens[current_token].token == leqsym) {
             current_token++;
             expression(errorFile);
-            emit(2, 0, 8); //LEQ
+            emit(2, 0, 8); // LEQ
         } else if (tokens[current_token].token == gtrsym) {
             current_token++;
             expression(errorFile);
-            emit(2, 0, 9); //GTR
+            emit(2, 0, 9); // GTR
         } else if (tokens[current_token].token == geqsym) {
             current_token++;
             expression(errorFile);
-            emit(2, 0, 10); //GEQ
+            emit(2, 0, 10); // GEQ
         } else {
             print_error("condition must contain comparison operator", NULL, errorFile);
         }
     }
 }
 
-//Function for when a expression is encountered
 void expression(FILE *errorFile) {
     int addop;
     if (tokens[current_token].token == plussym || tokens[current_token].token == minussym) {
@@ -455,7 +458,7 @@ void expression(FILE *errorFile) {
         current_token++;
         term(errorFile);
         if (addop == minussym) {
-            emit(2, 0, 2); //SUB
+            emit(2, 0, 2); // SUB
         }
     } else {
         term(errorFile);
@@ -465,14 +468,13 @@ void expression(FILE *errorFile) {
         current_token++;
         term(errorFile);
         if (addop == plussym) {
-            emit(2, 0, 1); //ADD
+            emit(2, 0, 1); // ADD
         } else {
-            emit(2, 0, 2); //SUB
+            emit(2, 0, 2); // SUB
         }
     }
 }
 
-//Function for when a term is encountered
 void term(FILE *errorFile) {
     factor(errorFile);
     while (tokens[current_token].token == multsym || tokens[current_token].token == slashsym) {
@@ -480,14 +482,13 @@ void term(FILE *errorFile) {
         current_token++;
         factor(errorFile);
         if (mulop == multsym) {
-            emit(2, 0, 3); //MUL
+            emit(2, 0, 3); // MUL
         } else {
-            emit(2, 0, 4); //DIV
+            emit(2, 0, 4); // DIV
         }
     }
 }
 
-//Function for when a factor is encountered
 void factor(FILE *errorFile) {
     if (tokens[current_token].token == identsym) {
         int symIdx = symbol_table_check(tokens[current_token].value);
@@ -495,13 +496,13 @@ void factor(FILE *errorFile) {
             print_error("undeclared identifier", tokens[current_token].value, errorFile);
         }
         current_token++;
-        if (symbol_table[symIdx].kind == 1) { //const
-            emit(1, 0, symbol_table[symIdx].val); //LIT
-        } else { //var
-            emit(3, 0, symbol_table[symIdx].addr); //LOD
+        if (symbol_table[symIdx].kind == 1) { // const
+            emit(1, 0, symbol_table[symIdx].val); // LIT
+        } else { // var
+            emit(3, 0, symbol_table[symIdx].addr); // LOD
         }
     } else if (tokens[current_token].token == numbersym) {
-        emit(1, 0, atoi(tokens[current_token].value)); //LIT
+        emit(1, 0, atoi(tokens[current_token].value)); // LIT
         current_token++;
     } else if (tokens[current_token].token == lparentsym) {
         current_token++;
@@ -515,7 +516,6 @@ void factor(FILE *errorFile) {
     }
 }
 
-//Function that checks the symbol table for an identifier
 int symbol_table_check(char *name) {
     for (int i = 0; i < symbol_table_index; i++) {
         if (strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].mark == 0) {
@@ -525,7 +525,6 @@ int symbol_table_check(char *name) {
     return -1;
 }
 
-//Function that checks the symbol table for an identifier during declaration
 int symbol_table_check_declaration(char *name) {
     for (int i = 0; i < symbol_table_index; i++) {
         if (strcmp(symbol_table[i].name, name) == 0) {
@@ -535,7 +534,6 @@ int symbol_table_check_declaration(char *name) {
     return -1;
 }
 
-//Function that adds an element to the symbol table
 void add_to_symbol_table(int kind, char *name, int val, int level, int addr) {
     symbol_table[symbol_table_index].kind = kind;
     strcpy(symbol_table[symbol_table_index].name, name);
@@ -546,14 +544,12 @@ void add_to_symbol_table(int kind, char *name, int val, int level, int addr) {
     symbol_table_index++;
 }
 
-//Function that marks all symbols in the symbol table to 1
 void mark_symbols() {
     for (int i = 0; i < symbol_table_index; i++) {
         symbol_table[i].mark = 1;
     }
 }
 
-//Function that prints the symbol table
 void print_symbol_table(FILE *outputFile) {
     printf("Symbol Table:\n");
     printf("Kind | Name       | Value | Level | Address | Mark\n");
@@ -569,7 +565,6 @@ void print_symbol_table(FILE *outputFile) {
     }
 }
 
-//Function that emits an instruction to the code arr
 void emit(int op, int l, int m) {
     code[code_index].op = op;
     code[code_index].l = l;
@@ -577,7 +572,6 @@ void emit(int op, int l, int m) {
     code_index++;
 }
 
-//Prints the generated code
 void print_code(FILE *outputFile) {
     printf("Generated Code:\n");
     printf("Line    OP    L    M\n");
@@ -599,98 +593,88 @@ void print_code(FILE *outputFile) {
     }
 }
 
-//MAIN
 int main(int argc, char *argv[]) {
-    //Exit program if there is no input file
+    // Exit program if there is no input file
     if (argc != 2) {
         printf("Usage: %s <source file>\n", argv[0]);
         return 1;
     }
 
-    //Open the input file
+    // Open the input file
     FILE *file = fopen(argv[1], "r");
     if (!file) {
         perror("Error opening file");
         return 1;
     }
 
-    //Get the source of input file into char array sourceProgram
+    // Get the source of input file into char array sourceProgram
     char sourceProgram[MAX_SOURCE_SIZE];
     size_t sourceSize = fread(sourceProgram, 1, MAX_SOURCE_SIZE - 1, file);
     fclose(file);
     sourceProgram[sourceSize] = '\0';
 
-    //Do lexical analysis
+    // Do lexical analysis
     lexicalAnalyzer(sourceProgram);
 
-    //Open lexOutput.txt for writing
+    // Open output.txt for writing
     FILE *outputFile = fopen("lexOutput.txt", "w");
     if (!outputFile) {
         perror("Error opening output file");
         return 1;
     }
 
-    //Output the source program
-    //printf("Source Program:\n%s\n\n", sourceProgram);
+    // Output the source program
     fprintf(outputFile, "Source Program:\n%s\n\n", sourceProgram);
 
-    //Output the lexeme table
-    //printf("Lexeme Table:\n");
+    // Output the lexeme table
     fprintf(outputFile, "Lexeme Table:\n");
-    //printf("\nlexeme token type\n");
     fprintf(outputFile, "\nlexeme token type\n");
     for (int i = 0; i < lexemeCount; i++) {
         if (lexemes[i].token == error_token) {
-            //printf("%-15s %s\n", lexemes[i].lexeme, lexemes[i].errorMessage);
             fprintf(outputFile, "%-15s %s\n", lexemes[i].lexeme, lexemes[i].errorMessage);
         } else {
-            //printf("%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
             fprintf(outputFile, "%-15s %-5d\n", lexemes[i].lexeme, lexemes[i].token);
         }
     }
 
-    //Output the token list
-    //printf("\nToken List:\n");
+    // Output the token list
     fprintf(outputFile, "\nToken List:\n");
     for (int i = 0; i < tokenCount; i++) {
-        //printf("%d", tokens[i].token);
         fprintf(outputFile, "%d", tokens[i].token);
         if (tokens[i].token == identsym || tokens[i].token == numbersym) {
-            //printf(" %s", tokens[i].value);
             fprintf(outputFile, " %s", tokens[i].value);
         }
         if (i < tokenCount - 1) {
-            //printf(" ");
             fprintf(outputFile, " ");
         }
     }
-    //printf("\n");
     fprintf(outputFile, "\n");
 
-    //Close the output file
+    // Close the output file
     fclose(outputFile);
 
-    //Open output.txt for writing
     FILE *outputFile2 = fopen("output.txt", "w");
     if (!outputFile2) {
         perror("Error opening output file");
         return 1;
     }
 
-    //Parse the program
+    // Parse the program
     program(outputFile2);
 
-    //Mark all symbols as available
+    // Mark all symbols as available
     mark_symbols();
 
-    //Output the generated code
+    // Output the generated code
     print_code(outputFile2);
     printf("\n");
 
-    //Output the symbol table
+    // Output the symbol table
     print_symbol_table(outputFile2);
 
-    //Close the output file
+    printf("Program parsed successfully.\n");
+
+    // Close the output file
     fclose(outputFile2);
 
     return 0;
