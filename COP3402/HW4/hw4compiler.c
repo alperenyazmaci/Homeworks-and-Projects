@@ -659,6 +659,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Print source program
+    fprintf(outputFile2, "Source Program:\n%s\n\n", sourceProgram);
+    printf("Source Program:\n%s\n\n", sourceProgram);
+
     // Parse the program
     program(outputFile2);
 
@@ -666,16 +670,26 @@ int main(int argc, char *argv[]) {
     mark_symbols();
 
     // Output the generated code
-    print_code(outputFile2);
-    printf("\n");
+    // print_code(outputFile2);
+    // printf("\n");
 
     // Output the symbol table
-    print_symbol_table(outputFile2);
+    // print_symbol_table(outputFile2);
 
-    printf("Program parsed successfully.\n");
+    printf("No errors, program is syntactically correct\n\n");
+    fprintf(outputFile2, "No errors, program is syntactically correct.\n\n");
 
     // Close the output file
     fclose(outputFile2);
+
+    // Create elf.txt with the executable code for VM
+    FILE *elfFile = fopen("elf.txt", "w");
+    if (!elfFile) {
+        perror("Error opening elf file");
+        return 1;
+    }
+    print_code(elfFile);
+    fclose(elfFile);
 
     return 0;
 }
