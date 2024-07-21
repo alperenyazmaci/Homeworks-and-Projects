@@ -1,0 +1,7 @@
+const a = 10;
+var x;
+begin
+call a;
+call x;
+x := 5
+end.

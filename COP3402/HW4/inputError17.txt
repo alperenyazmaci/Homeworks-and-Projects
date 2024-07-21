@@ -1,0 +1,9 @@
+var x;
+procedure p;
+var y;
+begin
+y := 5
+end
+begin
+x := 3
+end.

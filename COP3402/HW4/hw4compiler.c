@@ -326,7 +326,7 @@ void block(FILE *errorFile, int level) {
             current_token++;
             block(errorFile, level + 1);
             if (tokens[current_token].token != semicolonsym) {
-                print_error(5, "Semicolon or comma missing", NULL, errorFile);
+                print_error(17, "Semicolon or end expected after block", NULL, errorFile);
             }
             current_token++;
         }
@@ -500,8 +500,6 @@ void statement(FILE *errorFile, int level) {
     }
 }
 
-
-
 void condition(FILE *errorFile, int level) {
     if (tokens[current_token].token == oddsym) {
         current_token++;
@@ -582,6 +580,9 @@ void factor(FILE *errorFile, int level) {
         int symIdx = symbol_table_check(tokens[current_token].value, level);
         if (symIdx == -1) {
             print_error(11, "Undeclared identifier", tokens[current_token].value, errorFile);
+        }
+        if (symbol_table[symIdx].kind == 3) {
+            print_error(21, "Expression must not contain a procedure identifier", tokens[current_token].value, errorFile);
         }
         current_token++;
         if (symbol_table[symIdx].kind == 1) { // const
