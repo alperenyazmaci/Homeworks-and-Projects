@@ -1,8 +1,1 @@
-Source Program:
-var x, y;
-begin
-x := y + 56
-end.
-
-No errors, program is syntactically correct.
-
+Error: undeclared identifier u

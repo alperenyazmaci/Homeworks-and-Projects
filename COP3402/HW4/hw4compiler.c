@@ -73,6 +73,7 @@ int tokenCount = 0;
 int current_token = 0;
 symbol symbol_table[MAX_SYMBOL_TABLE_SIZE];
 int symbol_table_index = 0;
+int scope_level = 0;
 
 // Code generation variables
 typedef struct {
@@ -83,8 +84,6 @@ typedef struct {
 
 instruction code[MAX_CODE_LENGTH];
 int code_index = 0;
-int scope_level = 0;
-
 
 // Function prototypes
 void lexicalAnalyzer(const char *source);
@@ -108,7 +107,7 @@ void add_to_symbol_table(int kind, char *name, int val, int level, int addr);
 void print_symbol_table(FILE *outputFile);
 void emit(int op, int l, int m);
 void print_code(FILE *outputFile);
-void mark_symbols();
+void mark_symbols(int level);
 
 // Function to add a lexeme to the Lexeme array
 void addLexeme(const char *lexeme, token_type token, const char *errorMessage) {
@@ -308,16 +307,9 @@ void block(FILE *errorFile) {
     statement(errorFile);
 
     // After finishing the block, mark symbols of this scope as unavailable
-    for (int i = 0; i < symbol_table_index; i++) {
-        if (symbol_table[i].level == current_level) {
-            symbol_table[i].mark = 1;
-        }
-    }
-
+    mark_symbols(current_level);
     scope_level--;
 }
-
-
 
 void const_declaration(FILE *errorFile) {
     if (tokens[current_token].token == constsym) {
@@ -468,13 +460,9 @@ void statement(FILE *errorFile) {
         emit(5, scope_level - symbol_table[symIdx].level, symbol_table[symIdx].addr); // CAL
         current_token++;
     } else {
-        // Added error handling for unknown statements
         print_error("unexpected token", tokens[current_token].value, errorFile);
     }
 }
-
-
-
 
 void condition(FILE *errorFile) {
     if (tokens[current_token].token == oddsym) {
@@ -561,7 +549,7 @@ void factor(FILE *errorFile) {
         if (symbol_table[symIdx].kind == 1) { // const
             emit(1, 0, symbol_table[symIdx].val); // LIT
         } else { // var
-            emit(3, 0, symbol_table[symIdx].addr); // LOD
+            emit(3, scope_level - symbol_table[symIdx].level, symbol_table[symIdx].addr); // LOD
         }
     } else if (tokens[current_token].token == numbersym) {
         emit(1, 0, atoi(tokens[current_token].value)); // LIT
@@ -578,29 +566,23 @@ void factor(FILE *errorFile) {
     }
 }
 
-
 int symbol_table_check(char *name, int level) {
-    for (int l = level; l >= 0; l--) {
-        for (int i = 0; i < symbol_table_index; i++) {
-            if (symbol_table[i].level == l && strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].mark == 0) {
-                return i;
-            }
-        }
-    }
-    return -1;
-}
-
-int symbol_table_check_declaration(char *name, int level) {
-    for (int i = 0; i < symbol_table_index; i++) {
-        if (symbol_table[i].level == level && strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].mark == 0) {
+    for (int i = symbol_table_index - 1; i >= 0; i--) {
+        if (strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].level <= level && symbol_table[i].mark == 0) {
             return i;
         }
     }
     return -1;
 }
 
-
-
+int symbol_table_check_declaration(char *name, int level) {
+    for (int i = symbol_table_index - 1; i >= 0; i--) {
+        if (strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].level == level) {
+            return i;
+        }
+    }
+    return -1;
+}
 
 void add_to_symbol_table(int kind, char *name, int val, int level, int addr) {
     symbol_table[symbol_table_index].kind = kind;
@@ -612,10 +594,11 @@ void add_to_symbol_table(int kind, char *name, int val, int level, int addr) {
     symbol_table_index++;
 }
 
-
-void mark_symbols() {
+void mark_symbols(int level) {
     for (int i = 0; i < symbol_table_index; i++) {
-        symbol_table[i].mark = 1;
+        if (symbol_table[i].level == level) {
+            symbol_table[i].mark = 1;
+        }
     }
 }
 
@@ -728,37 +711,23 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Print source program
-    fprintf(outputFile2, "Source Program:\n%s\n\n", sourceProgram);
-    printf("Source Program:\n%s\n\n", sourceProgram);
-
     // Parse the program
     program(outputFile2);
 
     // Mark all symbols as available
-    mark_symbols();
+    mark_symbols(scope_level);
 
     // Output the generated code
-    // print_code(outputFile2);
-    // printf("\n");
+    print_code(outputFile2);
+    printf("\n");
 
     // Output the symbol table
-    // print_symbol_table(outputFile2);
+    print_symbol_table(outputFile2);
 
-    printf("No errors, program is syntactically correct\n\n");
-    fprintf(outputFile2, "No errors, program is syntactically correct.\n\n");
+    printf("Program parsed successfully.\n");
 
     // Close the output file
     fclose(outputFile2);
-
-    // Create elf.txt with the executable code for VM
-    FILE *elfFile = fopen("elf.txt", "w");
-    if (!elfFile) {
-        perror("Error opening elf file");
-        return 1;
-    }
-    print_code(elfFile);
-    fclose(elfFile);
 
     return 0;
 }
