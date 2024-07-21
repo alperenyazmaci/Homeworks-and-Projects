@@ -29,7 +29,6 @@ typedef enum {
     readsym, elsesym, fisym, error_token
 } token_type;
 
-
 // Struct aliases and definitions
 typedef struct {
     char lexeme[12];
@@ -91,7 +90,7 @@ void addLexeme(const char *lexeme, token_type token, const char *errorMessage);
 void addToken(token_type token, const char *value);
 token_type getReservedWordToken(const char *word);
 token_type getSpecialSymbolToken(const char *symbol);
-void print_error(const char *message, const char *identifier, FILE *errorFile);
+void print_error(int code, const char *message, const char *identifier, FILE *errorFile);
 void program(FILE *errorFile);
 void block(FILE *errorFile, int level);
 void const_declaration(FILE *errorFile, int level);
@@ -108,6 +107,37 @@ void print_symbol_table(FILE *outputFile);
 void emit(int op, int l, int m);
 void print_code(FILE *outputFile);
 void mark_symbols(int level);
+
+// Error messages
+const char *error_messages[] = {
+    "Use = instead of :=.",
+    "= must be followed by a number.",
+    "Identifier must be followed by =.",
+    "const, var, procedure must be followed by identifier.",
+    "Semicolon or comma missing.",
+    "Incorrect symbol after procedure declaration.",
+    "Statement expected.",
+    "Incorrect symbol after statement part in block.",
+    "Period expected.",
+    "Semicolon between statements missing.",
+    "Undeclared identifier.",
+    "Assignment to constant or procedure is not allowed.",
+    "Assignment operator expected.",
+    "call must be followed by an identifier.",
+    "Call of a constant or variable is meaningless.",
+    "then expected.",
+    "Semicolon or end expected.",
+    "do expected.",
+    "Incorrect symbol following statement.",
+    "Relational operator expected.",
+    "Expression must not contain a procedure identifier.",
+    "Right parenthesis missing.",
+    "The preceding factor cannot begin with this symbol.",
+    "An expression cannot begin with this symbol.",
+    "This number is too large.",
+    "Identifier too long.",
+    "Invalid symbol."
+};
 
 // Function to add a lexeme to the Lexeme array
 void addLexeme(const char *lexeme, token_type token, const char *errorMessage) {
@@ -246,13 +276,13 @@ void lexicalAnalyzer(const char *source) {
     }
 }
 
-void print_error(const char *message, const char *identifier, FILE *errorFile) {
+void print_error(int code, const char *message, const char *identifier, FILE *errorFile) {
     if (identifier != NULL) {
-        printf("Error: %s %s\n", message, identifier);
-        fprintf(errorFile, "Error: %s %s\n", message, identifier);
+        printf("***** Error number %d, %s %s\n", code, message, identifier);
+        fprintf(errorFile, "***** Error number %d, %s %s\n", code, message, identifier);
     } else {
-        printf("Error: %s\n", message);
-        fprintf(errorFile, "Error: %s\n", message);
+        printf("***** Error number %d, %s\n", code, message);
+        fprintf(errorFile, "***** Error number %d, %s\n", code, message);
     }
     exit(1);
 }
@@ -263,7 +293,7 @@ void program(FILE *errorFile) {
     emit(7, 0, 3); // JMP to main block
     block(errorFile, 0);
     if (tokens[current_token].token != periodsym) {
-        print_error("program must end with period", NULL, errorFile);
+        print_error(9, error_messages[8], NULL, errorFile); // Period expected
     }
     emit(9, 0, 3); // HALT
 }
@@ -288,15 +318,15 @@ void block(FILE *errorFile, int level) {
                 add_to_symbol_table(3, tokens[current_token].value, 0, level, code_index);
                 current_token++;
             } else {
-                print_error("procedure keyword must be followed by identifier", NULL, errorFile);
+                print_error(4, error_messages[3], NULL, errorFile); // const, var, procedure must be followed by identifier
             }
             if (tokens[current_token].token != semicolonsym) {
-                print_error("procedure declarations must be followed by a semicolon", NULL, errorFile);
+                print_error(5, error_messages[4], NULL, errorFile); // Semicolon or comma missing
             }
             current_token++;
             block(errorFile, level + 1);
             if (tokens[current_token].token != semicolonsym) {
-                print_error("semicolon expected", NULL, errorFile);
+                print_error(5, error_messages[4], NULL, errorFile); // Semicolon or comma missing
             }
             current_token++;
         }
@@ -318,23 +348,23 @@ void const_declaration(FILE *errorFile, int level) {
         do {
             current_token++;
             if (tokens[current_token].token != identsym) {
-                print_error("const keyword must be followed by identifier", NULL, errorFile);
+                print_error(4, error_messages[3], NULL, errorFile); // const, var, procedure must be followed by identifier
             }
             char const_name[12];
             strcpy(const_name, tokens[current_token].value);
 
             if (symbol_table_check_declaration(const_name, level) != -1) {
-                print_error("symbol name has already been declared", const_name, errorFile);
+                print_error(6, error_messages[5], const_name, errorFile); // Incorrect symbol after procedure declaration
             }
 
             current_token++;
             if (tokens[current_token].token != eqsym) {
-                print_error("constants must be assigned with =", NULL, errorFile);
+                print_error(3, error_messages[2], NULL, errorFile); // Identifier must be followed by =
             }
 
             current_token++;
             if (tokens[current_token].token != numbersym) {
-                                print_error("constants must be assigned an integer value", NULL, errorFile);
+                print_error(2, error_messages[1], NULL, errorFile); // = must be followed by a number
             }
             int const_value = atoi(tokens[current_token].value);
 
@@ -344,7 +374,7 @@ void const_declaration(FILE *errorFile, int level) {
         } while (tokens[current_token].token == commasym);
 
         if (tokens[current_token].token != semicolonsym) {
-            print_error("constant declarations must be followed by a semicolon", NULL, errorFile);
+            print_error(5, error_messages[4], NULL, errorFile); // Semicolon or comma missing
         }
         current_token++;
     }
@@ -357,17 +387,17 @@ int var_declaration(FILE *errorFile, int level) {
             numVars++;
             current_token++;
             if (tokens[current_token].token != identsym) {
-                print_error("var keyword must be followed by identifier", NULL, errorFile);
+                print_error(4, error_messages[3], NULL, errorFile); // const, var, procedure must be followed by identifier
             }
             if (symbol_table_check_declaration(tokens[current_token].value, level) != -1) {
-                print_error("symbol name has already been declared", tokens[current_token].value, errorFile);
+                print_error(6, error_messages[5], tokens[current_token].value, errorFile); // Incorrect symbol after procedure declaration
             }
             add_to_symbol_table(2, tokens[current_token].value, 0, level, numVars + 2);
             current_token++;
         } while (tokens[current_token].token == commasym);
 
         if (tokens[current_token].token != semicolonsym) {
-            print_error("variable declarations must be followed by a semicolon", NULL, errorFile);
+            print_error(5, error_messages[4], NULL, errorFile); // Semicolon or comma missing
         }
         current_token++;
     }
@@ -378,14 +408,14 @@ void statement(FILE *errorFile, int level) {
     if (tokens[current_token].token == identsym) {
         int symIdx = symbol_table_check(tokens[current_token].value, level);
         if (symIdx == -1) {
-            print_error("undeclared identifier", tokens[current_token].value, errorFile);
+            print_error(11, error_messages[10], tokens[current_token].value, errorFile); // Undeclared identifier
         }
         if (symbol_table[symIdx].kind != 2) {
-            print_error("only variable values may be altered", NULL, errorFile);
+            print_error(12, error_messages[11], NULL, errorFile); // Assignment to constant or procedure is not allowed
         }
         current_token++;
         if (tokens[current_token].token != becomessym) {
-            print_error("assignment statements must use :=", NULL, errorFile);
+            print_error(13, error_messages[12], NULL, errorFile); // Assignment operator expected
         }
         current_token++;
         expression(errorFile, level);
@@ -396,7 +426,7 @@ void statement(FILE *errorFile, int level) {
             statement(errorFile, level);
         } while (tokens[current_token].token == semicolonsym);
         if (tokens[current_token].token != endsym) {
-            print_error("begin must be followed by end", NULL, errorFile);
+            print_error(17, error_messages[16], NULL, errorFile); // Semicolon or end expected
         }
         current_token++;
     } else if (tokens[current_token].token == ifsym) {
@@ -405,7 +435,7 @@ void statement(FILE *errorFile, int level) {
         int jpcIdx = code_index;
         emit(8, 0, 0); // JPC
         if (tokens[current_token].token != thensym) {
-            print_error("if must be followed by then", NULL, errorFile);
+            print_error(16, error_messages[15], NULL, errorFile); // then expected
         }
         current_token++;
         statement(errorFile, level);
@@ -418,7 +448,7 @@ void statement(FILE *errorFile, int level) {
             code[jmpIdx].m = code_index;
         }
         if (tokens[current_token].token != fisym) {
-            print_error("if must be followed by fi", NULL, errorFile);
+            print_error(19, error_messages[18], NULL, errorFile); // Incorrect symbol following statement
         }
         current_token++;
     } else if (tokens[current_token].token == whilesym) {
@@ -428,7 +458,7 @@ void statement(FILE *errorFile, int level) {
         int jpcIdx = code_index;
         emit(8, 0, 0); // JPC
         if (tokens[current_token].token != dosym) {
-            print_error("while must be followed by do", NULL, errorFile);
+            print_error(18, error_messages[17], NULL, errorFile); // do expected
         }
         current_token++;
         statement(errorFile, level);
@@ -437,14 +467,14 @@ void statement(FILE *errorFile, int level) {
     } else if (tokens[current_token].token == readsym) {
         current_token++;
         if (tokens[current_token].token != identsym) {
-            print_error("read keyword must be followed by identifier", NULL, errorFile);
+            print_error(14, error_messages[13], NULL, errorFile); // call must be followed by an identifier
         }
         int symIdx = symbol_table_check(tokens[current_token].value, level);
         if (symIdx == -1) {
-            print_error("undeclared identifier", tokens[current_token].value, errorFile);
+            print_error(11, error_messages[10], tokens[current_token].value, errorFile); // Undeclared identifier
         }
         if (symbol_table[symIdx].kind != 2) {
-            print_error("only variable values may be altered", NULL, errorFile);
+            print_error(12, error_messages[11], NULL, errorFile); // Assignment to constant or procedure is not allowed
         }
         current_token++;
         emit(9, 0, 2); // READ
@@ -456,21 +486,19 @@ void statement(FILE *errorFile, int level) {
     } else if (tokens[current_token].token == callsym) {
         current_token++;
         if (tokens[current_token].token != identsym) {
-            print_error("call must be followed by an identifier", NULL, errorFile);
+            print_error(14, error_messages[13], NULL, errorFile); // call must be followed by an identifier
         }
         int symIdx = symbol_table_check(tokens[current_token].value, level);
         if (symIdx == -1) {
-            print_error("undeclared procedure", tokens[current_token].value, errorFile);
+            print_error(11, error_messages[10], tokens[current_token].value, errorFile); // Undeclared identifier
         }
         if (symbol_table[symIdx].kind != 3) {
-            print_error("call must be followed by a procedure identifier", tokens[current_token].value, errorFile);
+            print_error(15, error_messages[14], tokens[current_token].value, errorFile); // Call of a constant or variable is meaningless
         }
         current_token++;
         emit(5, level - symbol_table[symIdx].level, symbol_table[symIdx].addr); // CAL
     }
 }
-
-
 
 void condition(FILE *errorFile, int level) {
     if (tokens[current_token].token == oddsym) {
@@ -504,7 +532,7 @@ void condition(FILE *errorFile, int level) {
             expression(errorFile, level);
             emit(2, 0, 10); // GEQ
         } else {
-            print_error("condition must contain comparison operator", NULL, errorFile);
+            print_error(20, error_messages[19], NULL, errorFile); // Relational operator expected
         }
     }
 }
@@ -551,7 +579,7 @@ void factor(FILE *errorFile, int level) {
     if (tokens[current_token].token == identsym) {
         int symIdx = symbol_table_check(tokens[current_token].value, level);
         if (symIdx == -1) {
-            print_error("undeclared identifier", tokens[current_token].value, errorFile);
+            print_error(11, error_messages[10], tokens[current_token].value, errorFile); // Undeclared identifier
         }
         current_token++;
         if (symbol_table[symIdx].kind == 1) { // const
@@ -566,11 +594,11 @@ void factor(FILE *errorFile, int level) {
         current_token++;
         expression(errorFile, level);
         if (tokens[current_token].token != rparentsym) {
-            print_error("right parenthesis must follow left parenthesis", NULL, errorFile);
+            print_error(22, error_messages[21], NULL, errorFile); // Right parenthesis missing
         }
         current_token++;
     } else {
-        print_error("arithmetic equations must contain operands, parentheses, numbers, or symbols", NULL, errorFile);
+        print_error(23, error_messages[22], NULL, errorFile); // The preceding factor cannot begin with this symbol
     }
 }
 
@@ -732,6 +760,8 @@ int main(int argc, char *argv[]) {
         perror("Error opening output file");
         return 1;
     }
+    
+    printf("Source Program:\n%s\n\n", sourceProgram);
 
     // Parse the program
     program(outputFile2);
@@ -739,7 +769,6 @@ int main(int argc, char *argv[]) {
     // Mark all symbols as unavailable
     mark_symbols(0);
 
-    printf("Source Program:\n%s\n\n", sourceProgram);
 
     printf("No errors, program is syntactically correct\n\n");
 
