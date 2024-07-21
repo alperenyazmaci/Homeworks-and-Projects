@@ -1,1 +1,1 @@
-Error: undeclared identifier u
+Error: begin must be followed by end
