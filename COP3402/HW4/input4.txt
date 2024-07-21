@@ -1,4 +1,3 @@
-Source Program:
 var x,y,z,v,w;
 procedure a;
 var x,y,u,v;
@@ -25,6 +24,3 @@ x:=v+w;
 write z;
 call a;
 end.
-
-
-Error: symbol name has already been declared x

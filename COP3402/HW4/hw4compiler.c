@@ -271,6 +271,35 @@ void block(FILE *errorFile) {
     const_declaration(errorFile);
     int numVars = var_declaration(errorFile);
     emit(6, 0, numVars + 3); // INC
+
+    // Procedure declarations
+    while (tokens[current_token].token == procsym) {
+        current_token++;
+        if (tokens[current_token].token != identsym) {
+            print_error("procedure keyword must be followed by identifier", NULL, errorFile);
+        }
+        char proc_name[12];
+        strcpy(proc_name, tokens[current_token].value);
+
+        if (symbol_table_check_declaration(proc_name) != -1) {
+            print_error("symbol name has already been declared", proc_name, errorFile);
+        }
+        add_to_symbol_table(3, proc_name, 0, 0, code_index);
+
+        current_token++;
+        if (tokens[current_token].token != semicolonsym) {
+            print_error("procedure declarations must be followed by a semicolon", NULL, errorFile);
+        }
+        current_token++;
+
+        block(errorFile);
+
+        if (tokens[current_token].token != semicolonsym) {
+            print_error("procedure declarations must be followed by a semicolon", NULL, errorFile);
+        }
+        current_token++;
+    }
+
     statement(errorFile);
 }
 
@@ -413,6 +442,7 @@ void statement(FILE *errorFile) {
         emit(9, 0, 1); // WRITE
     }
 }
+
 
 void condition(FILE *errorFile) {
     if (tokens[current_token].token == oddsym) {
