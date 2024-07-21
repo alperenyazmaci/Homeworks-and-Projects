@@ -83,6 +83,8 @@ typedef struct {
 
 instruction code[MAX_CODE_LENGTH];
 int code_index = 0;
+int scope_level = 0;
+
 
 // Function prototypes
 void lexicalAnalyzer(const char *source);
@@ -101,7 +103,7 @@ void expression(FILE *errorFile);
 void term(FILE *errorFile);
 void factor(FILE *errorFile);
 int symbol_table_check(char *name);
-int symbol_table_check_declaration(char *name);
+int symbol_table_check_declaration(char *name, int level);
 void add_to_symbol_table(int kind, char *name, int val, int level, int addr);
 void print_symbol_table(FILE *outputFile);
 void emit(int op, int l, int m);
@@ -268,6 +270,9 @@ void program(FILE *errorFile) {
 }
 
 void block(FILE *errorFile) {
+    int current_level = scope_level;
+    scope_level++;
+
     const_declaration(errorFile);
     int numVars = var_declaration(errorFile);
     emit(6, 0, numVars + 3); // INC
@@ -281,10 +286,10 @@ void block(FILE *errorFile) {
         char proc_name[12];
         strcpy(proc_name, tokens[current_token].value);
 
-        if (symbol_table_check_declaration(proc_name) != -1) {
+        if (symbol_table_check_declaration(proc_name, current_level) != -1) {
             print_error("symbol name has already been declared", proc_name, errorFile);
         }
-        add_to_symbol_table(3, proc_name, 0, 0, code_index);
+        add_to_symbol_table(3, proc_name, 0, current_level, code_index);
 
         current_token++;
         if (tokens[current_token].token != semicolonsym) {
@@ -301,7 +306,17 @@ void block(FILE *errorFile) {
     }
 
     statement(errorFile);
+
+    // After finishing the block, mark symbols of this scope as unavailable
+    for (int i = 0; i < symbol_table_index; i++) {
+        if (symbol_table[i].level == current_level) {
+            symbol_table[i].mark = 1;
+        }
+    }
+
+    scope_level--;
 }
+
 
 void const_declaration(FILE *errorFile) {
     if (tokens[current_token].token == constsym) {
@@ -313,7 +328,7 @@ void const_declaration(FILE *errorFile) {
             char const_name[12];
             strcpy(const_name, tokens[current_token].value);
 
-            if (symbol_table_check_declaration(const_name) != -1) {
+            if (symbol_table_check_declaration(const_name, scope_level) != -1) {
                 print_error("symbol name has already been declared", const_name, errorFile);
             }
 
@@ -328,7 +343,7 @@ void const_declaration(FILE *errorFile) {
             }
             int const_value = atoi(tokens[current_token].value);
 
-            add_to_symbol_table(1, const_name, const_value, 0, 0);
+            add_to_symbol_table(1, const_name, const_value, scope_level, 0);
 
             current_token++;
         } while (tokens[current_token].token == commasym);
@@ -349,10 +364,10 @@ int var_declaration(FILE *errorFile) {
             if (tokens[current_token].token != identsym) {
                 print_error("var keyword must be followed by identifier", NULL, errorFile);
             }
-            if (symbol_table_check_declaration(tokens[current_token].value) != -1) {
+            if (symbol_table_check_declaration(tokens[current_token].value, scope_level) != -1) {
                 print_error("symbol name has already been declared", tokens[current_token].value, errorFile);
             }
-            add_to_symbol_table(2, tokens[current_token].value, 0, 0, numVars + 2);
+            add_to_symbol_table(2, tokens[current_token].value, 0, scope_level, numVars + 2);
             current_token++;
         } while (tokens[current_token].token == commasym);
 
@@ -380,6 +395,17 @@ void statement(FILE *errorFile) {
         current_token++;
         expression(errorFile);
         emit(4, 0, symbol_table[symIdx].addr); // STO
+    } else if (tokens[current_token].token == callsym) {
+        current_token++;
+        if (tokens[current_token].token != identsym) {
+            print_error("call must be followed by an identifier", NULL, errorFile);
+        }
+        int symIdx = symbol_table_check(tokens[current_token].value);
+        if (symIdx == -1 || symbol_table[symIdx].kind != 3) {
+            print_error("undeclared procedure identifier", tokens[current_token].value, errorFile);
+        }
+        emit(5, 0, symbol_table[symIdx].addr); // CAL
+        current_token++;
     } else if (tokens[current_token].token == beginsym) {
         do {
             current_token++;
@@ -442,6 +468,7 @@ void statement(FILE *errorFile) {
         emit(9, 0, 1); // WRITE
     }
 }
+
 
 
 void condition(FILE *errorFile) {
@@ -546,8 +573,9 @@ void factor(FILE *errorFile) {
     }
 }
 
+
 int symbol_table_check(char *name) {
-    for (int i = 0; i < symbol_table_index; i++) {
+    for (int i = symbol_table_index - 1; i >= 0; i--) {
         if (strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].mark == 0) {
             return i;
         }
@@ -555,14 +583,18 @@ int symbol_table_check(char *name) {
     return -1;
 }
 
-int symbol_table_check_declaration(char *name) {
-    for (int i = 0; i < symbol_table_index; i++) {
+int symbol_table_check_declaration(char *name, int level) {
+    for (int i = symbol_table_index - 1; i >= 0; i--) {
+        if (symbol_table[i].level < level) {
+            break;
+        }
         if (strcmp(symbol_table[i].name, name) == 0) {
             return i;
         }
     }
     return -1;
 }
+
 
 void add_to_symbol_table(int kind, char *name, int val, int level, int addr) {
     symbol_table[symbol_table_index].kind = kind;
@@ -573,6 +605,7 @@ void add_to_symbol_table(int kind, char *name, int val, int level, int addr) {
     symbol_table[symbol_table_index].mark = 0;
     symbol_table_index++;
 }
+
 
 void mark_symbols() {
     for (int i = 0; i < symbol_table_index; i++) {
@@ -704,7 +737,7 @@ int main(int argc, char *argv[]) {
     // printf("\n");
 
     // Output the symbol table
-    // print_symbol_table(outputFile2);
+    print_symbol_table(outputFile2);
 
     printf("No errors, program is syntactically correct\n\n");
     fprintf(outputFile2, "No errors, program is syntactically correct.\n\n");
