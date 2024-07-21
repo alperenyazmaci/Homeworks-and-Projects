@@ -26,8 +26,9 @@ typedef enum {
     gtrsym, geqsym, lparentsym, rparentsym, commasym, semicolonsym,
     periodsym, becomessym, beginsym, endsym, ifsym, thensym,
     whilesym, dosym, callsym, constsym, varsym, procsym, writesym,
-    readsym, elsesym, error_token
+    readsym, elsesym, fisym, error_token
 } token_type;
+
 
 // Struct aliases and definitions
 typedef struct {
@@ -56,7 +57,7 @@ const char *reservedWords[] = {
     "else", "while", "do", "read", "write"
 };
 const token_type reservedTokens[] = {
-    constsym, varsym, procsym, callsym, beginsym, endsym, ifsym, oddsym, thensym, elsesym, whilesym, dosym, readsym, writesym
+    constsym, varsym, procsym, callsym, beginsym, endsym, ifsym, fisym, thensym, elsesym, whilesym, dosym, readsym, writesym
 };
 const char *specialSymbols[] = {
     "+", "-", "*", "/", "(", ")", "=", ",", ".", "<", ">", ";", ":=", "<>"
@@ -388,7 +389,7 @@ void statement(FILE *errorFile, int level) {
         }
         current_token++;
         expression(errorFile, level);
-        emit(4, 0, symbol_table[symIdx].addr); // STO
+        emit(4, level - symbol_table[symIdx].level, symbol_table[symIdx].addr); // STO
     } else if (tokens[current_token].token == beginsym) {
         do {
             current_token++;
@@ -412,11 +413,14 @@ void statement(FILE *errorFile, int level) {
         if (tokens[current_token].token == elsesym) {
             int jmpIdx = code_index;
             emit(7, 0, 0); // JMP
-            code[jpcIdx].m = code_index;
             current_token++;
             statement(errorFile, level);
             code[jmpIdx].m = code_index;
         }
+        if (tokens[current_token].token != fisym) {
+            print_error("if must be followed by fi", NULL, errorFile);
+        }
+        current_token++;
     } else if (tokens[current_token].token == whilesym) {
         current_token++;
         int loopIdx = code_index;
@@ -444,7 +448,7 @@ void statement(FILE *errorFile, int level) {
         }
         current_token++;
         emit(9, 0, 2); // READ
-        emit(4, 0, symbol_table[symIdx].addr); // STO
+        emit(4, level - symbol_table[symIdx].level, symbol_table[symIdx].addr); // STO
     } else if (tokens[current_token].token == writesym) {
         current_token++;
         expression(errorFile, level);
@@ -465,6 +469,8 @@ void statement(FILE *errorFile, int level) {
         emit(5, level - symbol_table[symIdx].level, symbol_table[symIdx].addr); // CAL
     }
 }
+
+
 
 void condition(FILE *errorFile, int level) {
     if (tokens[current_token].token == oddsym) {
@@ -749,8 +755,5 @@ int main(int argc, char *argv[]) {
     // Close the output file
     fclose(outputFile2);
 
-
-
     return 0;
 }
-
