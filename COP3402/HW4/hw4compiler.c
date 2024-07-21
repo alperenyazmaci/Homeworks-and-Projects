@@ -456,6 +456,20 @@ void statement(FILE *errorFile) {
         current_token++;
         expression(errorFile);
         emit(9, 0, 1); // WRITE
+    } else if (tokens[current_token].token == callsym) {
+        current_token++;
+        if (tokens[current_token].token != identsym) {
+            print_error("call must be followed by a procedure identifier", NULL, errorFile);
+        }
+        int symIdx = symbol_table_check(tokens[current_token].value, scope_level);
+        if (symIdx == -1 || symbol_table[symIdx].kind != 3) {
+            print_error("call must be followed by a procedure identifier", tokens[current_token].value, errorFile);
+        }
+        emit(5, scope_level - symbol_table[symIdx].level, symbol_table[symIdx].addr); // CAL
+        current_token++;
+    } else {
+        // Added error handling for unknown statements
+        print_error("unexpected token", tokens[current_token].value, errorFile);
     }
 }
 
@@ -566,26 +580,26 @@ void factor(FILE *errorFile) {
 
 
 int symbol_table_check(char *name, int level) {
-    for (int i = symbol_table_index - 1; i >= 0; i--) {
-        if (symbol_table[i].mark == 0 && strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].level <= level) {
-            return i;
+    for (int l = level; l >= 0; l--) {
+        for (int i = 0; i < symbol_table_index; i++) {
+            if (symbol_table[i].level == l && strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].mark == 0) {
+                return i;
+            }
         }
     }
     return -1;
 }
-
 
 int symbol_table_check_declaration(char *name, int level) {
-    for (int i = symbol_table_index - 1; i >= 0; i--) {
-        if (symbol_table[i].level < level) {
-            break;
-        }
-        if (strcmp(symbol_table[i].name, name) == 0) {
+    for (int i = 0; i < symbol_table_index; i++) {
+        if (symbol_table[i].level == level && strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].mark == 0) {
             return i;
         }
     }
     return -1;
 }
+
+
 
 
 void add_to_symbol_table(int kind, char *name, int val, int level, int addr) {
