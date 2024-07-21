@@ -102,7 +102,7 @@ void condition(FILE *errorFile);
 void expression(FILE *errorFile);
 void term(FILE *errorFile);
 void factor(FILE *errorFile);
-int symbol_table_check(char *name);
+int symbol_table_check(char *name, int level);
 int symbol_table_check_declaration(char *name, int level);
 void add_to_symbol_table(int kind, char *name, int val, int level, int addr);
 void print_symbol_table(FILE *outputFile);
@@ -318,6 +318,7 @@ void block(FILE *errorFile) {
 }
 
 
+
 void const_declaration(FILE *errorFile) {
     if (tokens[current_token].token == constsym) {
         do {
@@ -381,7 +382,7 @@ int var_declaration(FILE *errorFile) {
 
 void statement(FILE *errorFile) {
     if (tokens[current_token].token == identsym) {
-        int symIdx = symbol_table_check(tokens[current_token].value);
+        int symIdx = symbol_table_check(tokens[current_token].value, scope_level);
         if (symIdx == -1) {
             print_error("undeclared identifier", tokens[current_token].value, errorFile);
         }
@@ -395,17 +396,6 @@ void statement(FILE *errorFile) {
         current_token++;
         expression(errorFile);
         emit(4, 0, symbol_table[symIdx].addr); // STO
-    } else if (tokens[current_token].token == callsym) {
-        current_token++;
-        if (tokens[current_token].token != identsym) {
-            print_error("call must be followed by an identifier", NULL, errorFile);
-        }
-        int symIdx = symbol_table_check(tokens[current_token].value);
-        if (symIdx == -1 || symbol_table[symIdx].kind != 3) {
-            print_error("undeclared procedure identifier", tokens[current_token].value, errorFile);
-        }
-        emit(5, 0, symbol_table[symIdx].addr); // CAL
-        current_token++;
     } else if (tokens[current_token].token == beginsym) {
         do {
             current_token++;
@@ -452,7 +442,7 @@ void statement(FILE *errorFile) {
         if (tokens[current_token].token != identsym) {
             print_error("read keyword must be followed by identifier", NULL, errorFile);
         }
-        int symIdx = symbol_table_check(tokens[current_token].value);
+        int symIdx = symbol_table_check(tokens[current_token].value, scope_level);
         if (symIdx == -1) {
             print_error("undeclared identifier", tokens[current_token].value, errorFile);
         }
@@ -468,6 +458,7 @@ void statement(FILE *errorFile) {
         emit(9, 0, 1); // WRITE
     }
 }
+
 
 
 
@@ -548,7 +539,7 @@ void term(FILE *errorFile) {
 
 void factor(FILE *errorFile) {
     if (tokens[current_token].token == identsym) {
-        int symIdx = symbol_table_check(tokens[current_token].value);
+        int symIdx = symbol_table_check(tokens[current_token].value, scope_level);
         if (symIdx == -1) {
             print_error("undeclared identifier", tokens[current_token].value, errorFile);
         }
@@ -574,14 +565,15 @@ void factor(FILE *errorFile) {
 }
 
 
-int symbol_table_check(char *name) {
+int symbol_table_check(char *name, int level) {
     for (int i = symbol_table_index - 1; i >= 0; i--) {
-        if (strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].mark == 0) {
+        if (symbol_table[i].mark == 0 && strcmp(symbol_table[i].name, name) == 0 && symbol_table[i].level <= level) {
             return i;
         }
     }
     return -1;
 }
+
 
 int symbol_table_check_declaration(char *name, int level) {
     for (int i = symbol_table_index - 1; i >= 0; i--) {
@@ -737,7 +729,7 @@ int main(int argc, char *argv[]) {
     // printf("\n");
 
     // Output the symbol table
-    print_symbol_table(outputFile2);
+    // print_symbol_table(outputFile2);
 
     printf("No errors, program is syntactically correct\n\n");
     fprintf(outputFile2, "No errors, program is syntactically correct.\n\n");
